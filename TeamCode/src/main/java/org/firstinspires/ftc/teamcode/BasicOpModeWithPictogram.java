@@ -29,7 +29,6 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorSensor;
@@ -37,9 +36,21 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark;
+import org.firstinspires.ftc.robotcore.external.navigation.VuMarkInstanceId;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
 import java.util.Locale;
 
@@ -57,9 +68,9 @@ import java.util.Locale;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Iterative OpMode", group="Iterative Opmode")
+@TeleOp(name="Basic: Iterative OpMode With VuMark", group="Iterative Opmode")
 //@Disabled
-public class BasicOpMode_IterativeTester extends OpMode
+public class BasicOpModeWithPictogram extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -77,6 +88,13 @@ public class BasicOpMode_IterativeTester extends OpMode
     static final double IDLE_GRIPPER        =  GRIPPER_OPEN;
 
     private boolean gripperClosed = false;
+
+    /* Vuforia stuff
+     */
+
+    private VuforiaLocalizer vuforia;
+    private VuforiaTrackables relicTrackables;
+    private VuforiaTrackable relicTemplate;
 
 
     /*
@@ -125,6 +143,35 @@ public class BasicOpMode_IterativeTester extends OpMode
         sensorColor = hardwareMap.get(ColorSensor.class, "color_distance_sensor");
         sensorDistance = hardwareMap.get(DistanceSensor.class, "color_distance_sensor");
 
+
+
+        /* ************************************
+        * Start up Vuforia, tell it the view that we wish to use for camera monitor (on the RC phone);
+        * If no camera monitor is desired, use the parameterless constructor instead (commented out below).
+        */
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
+
+        parameters.vuforiaLicenseKey = "AXINfYT/////AAAAGfcLttUpcU8GheQqMMZAtnFDz/qRJOlHnxEna51521+PFcmEWc02gUQ1s4DchmXk+fFvt+afRNF+2UoUgoAyQNtfVjRNS0u4f5o4kka/jERVEtKlJ27pO4euCEjE1DQ+l8ecADKTd1aWu641OheSf/RqDJ7BSvDct/PYRfRLfShAfBUxaFT3+Ud+6EL31VTmZKiylukvCnHaaQZxDmB2cCDdYFeK2CDwNIWoMx2VvweehNARttNvSR3cp4AepbtWnadsEnDQaStDv8jN09iE7CRWmMY8rrP8ba/O/eVlz0vzU7Fhtf2jXpSvCJn0qDw+1UK/bHsD/vslhdp+CBNcW7bT3gNHgTOrnIcldX2YhgZS";
+
+        /*
+         * We also indicate which camera on the RC that we wish to use.
+         * Here we chose the back (HiRes) camera (for greater range), but
+         * for a competition robot, the front camera might be more convenient.
+         */
+        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
+        this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
+
+        /**
+         * Load the data set containing the VuMarks for Relic Recovery. There's only one trackable
+         * in this data set: all three of the VuMarks in the game were created from this one template,
+         * but differ in their instance id information.
+         * @see VuMarkInstanceId
+         */
+        this.relicTrackables = this.vuforia.loadTrackablesFromAsset("RelicVuMark");
+        this.relicTemplate = relicTrackables.get(0);
+        relicTemplate.setName("relicVuMarkTemplate"); // can help in debugging; otherwise not necessary
+
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
     }
@@ -136,6 +183,7 @@ public class BasicOpMode_IterativeTester extends OpMode
     public void init_loop() {
 
         telemetry.addData("Status", "Make sure motors are free to move");
+        telemetry.addData("Status", "Make back camera on the Robot Controller is not obstructed");
     }
 
     /*
@@ -145,6 +193,7 @@ public class BasicOpMode_IterativeTester extends OpMode
     public void start() {
 
         runtime.reset();
+        relicTrackables.activate();
     }
 
     /*
@@ -206,6 +255,49 @@ public class BasicOpMode_IterativeTester extends OpMode
         /* **************** LIFT THE ARM *****/
         double lift_speed = -gamepad2.left_stick_y;
         lifting_arm.setPower(lift_speed);
+
+
+
+        /**
+         * See if any of the instances of {@link relicTemplate} are currently visible.
+         * {@link RelicRecoveryVuMark} is an enum which can have the following values:
+         * UNKNOWN, LEFT, CENTER, and RIGHT. When a VuMark is visible, something other than
+         * UNKNOWN will be returned by {@link RelicRecoveryVuMark#from(VuforiaTrackable)}.
+         */
+        RelicRecoveryVuMark vuMark = RelicRecoveryVuMark.from(relicTemplate);
+        if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
+
+            /* Found an instance of the template. In the actual game, you will probably
+             * loop until this condition occurs, then move on to act accordingly depending
+             * on which VuMark was visible. */
+            telemetry.addData("VuMark", "%s visible", vuMark);
+
+            /* For fun, we also exhibit the navigational pose. In the Relic Recovery game,
+             * it is perhaps unlikely that you will actually need to act on this pose information, but
+             * we illustrate it nevertheless, for completeness. */
+            OpenGLMatrix pose = ((VuforiaTrackableDefaultListener)relicTemplate.getListener()).getPose();
+            telemetry.addData("Pose", format(pose));
+
+            /* We further illustrate how to decompose the pose into useful rotational and
+             * translational components */
+            if (pose != null) {
+                VectorF trans = pose.getTranslation();
+                Orientation rot = Orientation.getOrientation(pose, AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
+
+                // Extract the X, Y, and Z components of the offset of the target relative to the robot
+                double tX = trans.get(0);
+                double tY = trans.get(1);
+                double tZ = trans.get(2);
+
+                // Extract the rotational components of the target relative to the robot
+                double rX = rot.firstAngle;
+                double rY = rot.secondAngle;
+                double rZ = rot.thirdAngle;
+            }
+        }
+        else {
+            telemetry.addData("VuMark", "not visible");
+        }
     }
 
     /*
@@ -213,6 +305,10 @@ public class BasicOpMode_IterativeTester extends OpMode
      */
     @Override
     public void stop() {
+    }
+
+    String format(OpenGLMatrix transformationMatrix) {
+        return (transformationMatrix != null) ? transformationMatrix.formatAsTransform() : "null";
     }
 
 }
