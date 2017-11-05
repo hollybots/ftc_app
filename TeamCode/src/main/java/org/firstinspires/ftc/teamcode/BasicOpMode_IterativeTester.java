@@ -76,8 +76,31 @@ public class BasicOpMode_IterativeTester extends OpMode
     static final double GRIPPER_CLOSED     =  0.5;     // Minimum rotational position
     static final double IDLE_GRIPPER        =  GRIPPER_OPEN;
 
-    private boolean gripperClosed = false;
 
+    static final double     COUNTS_PER_MOTOR_REV    = 1440 ;    // eg: TETRIX Motor Encoder
+    static final double     DRIVE_GEAR_REDUCTION    = 1.0 ;     // This is < 1.0 if geared UP
+    static final double     BOBIN_CIRCUMFERENCE     = 2.875 ;     // For figuring circumference
+    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / BOBIN_CIRCUMFERENCE;
+    static final double     DRIVE_SPEED             = 0.6;
+    static final double     TURN_SPEED              = 0.5;
+
+
+    static final double     FIRST_FLOOR             = 0.0;  // height in inches
+    static final double     SECOND_FLOOR            = 6.0;  // height in inches
+    static final double     THIRD_FLOOR             = 12.0; // height in inches
+    static final double     FOURTH_FLOOR            = 18.0; // height in inches
+    static final double     OPTIMAL_ARM_SPEED       = 1.0;
+
+    private boolean gripperClosed                   = false;
+
+    private double newTargetHeight                  = 0.0;
+
+
+    static final byte STATUS_RESTING                = 0;
+    static final byte STATUS_LIFTING                = 1;
+    static final byte STATUS_ENGAGING               = 2;
+    static final double ACCEPTABLE_RANGE_INCHES     = 0.25;
+    private byte armStatus                          = STATUS_RESTING;
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -103,10 +126,12 @@ public class BasicOpMode_IterativeTester extends OpMode
         rightDrive.setDirection(DcMotor.Direction.REVERSE);
 
         /* ************************************
-            LIFTING ARM
+            STATUS_LIFTING ARM
          */
         lifting_arm = hardwareMap.get(DcMotor.class, "lifting_arm");
         lifting_arm.setDirection(DcMotor.Direction.REVERSE);
+        lifting_arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        lifting_arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
 
         /* ************************************
@@ -136,6 +161,9 @@ public class BasicOpMode_IterativeTester extends OpMode
     public void init_loop() {
 
         telemetry.addData("Status", "Make sure motors are free to move");
+        // Send telemetry message to indicate successful Encoder reset
+        telemetry.addData("Lift Init",  "Starting height %7d", lifting_arm.getCurrentPosition());
+        telemetry.update();
     }
 
     /*
@@ -155,7 +183,6 @@ public class BasicOpMode_IterativeTester extends OpMode
         // Setup a variable for each drive wheel to save power level for telemetry
         double leftPower;
         double rightPower;
-
 
         // Choose to drive using either Tank Mode, or POV Mode
         // Comment out the method that's not used.  The default below is POV.
@@ -206,6 +233,51 @@ public class BasicOpMode_IterativeTester extends OpMode
         /* **************** LIFT THE ARM *****/
         double lift_speed = -gamepad2.left_stick_y;
         lifting_arm.setPower(lift_speed);
+
+
+        /* ********* AUTO LIFT BUTTONS ********/
+        if ( gamepad2.a ) {
+            newTargetHeight = FIRST_FLOOR;
+            armStatus = STATUS_ENGAGING;
+        }
+        else if ( gamepad2.b ) {
+            newTargetHeight = SECOND_FLOOR;
+            armStatus = STATUS_ENGAGING;
+        }
+        else if ( gamepad2.x ) {
+            newTargetHeight = THIRD_FLOOR;
+            armStatus = STATUS_ENGAGING;
+        }
+        else if ( gamepad2.y ) {
+            newTargetHeight = FOURTH_FLOOR;
+            armStatus = STATUS_ENGAGING;
+        }
+
+        if ( armStatus == STATUS_ENGAGING ) {
+            lifting_arm.setTargetPosition((int)(newTargetHeight * COUNTS_PER_INCH));
+            // Turn On RUN_TO_POSITION
+            lifting_arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            // reset the timeout time and start motion.
+            lifting_arm.setPower(Math.abs(OPTIMAL_ARM_SPEED));
+
+            // Change the status to lifting
+            armStatus = STATUS_LIFTING;
+        }
+
+        // We are waiting for the arm to raise to our level
+        if ( armStatus == STATUS_LIFTING && lifting_arm.isBusy() ) {
+            if ( emergencyStop() || withinAcceptableRange(lifting_arm.getCurrentPosition(), (int)(newTargetHeight * COUNTS_PER_INCH)) ) {
+                // Stop all motion;
+                lifting_arm.setPower(0);
+                // Turn off RUN_TO_POSITION
+                lifting_arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                armStatus = STATUS_RESTING;
+            }
+            telemetry.addData("Lift Goal",  "Lifting to %7d", newTargetHeight);
+            telemetry.addData("Lift Current",  "Currently at %7d", lifting_arm.getCurrentPosition());
+            telemetry.update();
+        }
     }
 
     /*
@@ -213,6 +285,17 @@ public class BasicOpMode_IterativeTester extends OpMode
      */
     @Override
     public void stop() {
+    }
+
+    private boolean emergencyStop() {
+        return ( gamepad2.right_stick_button );
+    }
+
+    private boolean withinAcceptableRange(int a, int b) {
+        if ( a <= b ) {
+            return ((b - a * 1.0) > ACCEPTABLE_RANGE_INCHES / COUNTS_PER_INCH);
+        }
+        return ((a - b * 1.0) > ACCEPTABLE_RANGE_INCHES / COUNTS_PER_INCH);
     }
 
 }
