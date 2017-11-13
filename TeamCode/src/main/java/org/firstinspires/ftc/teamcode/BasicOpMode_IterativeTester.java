@@ -69,23 +69,34 @@ public class BasicOpMode_IterativeTester extends OpMode
     private DcMotor lifting_arm = null;
     private Servo    leftGripper    = null;
     private Servo    rightGripper   = null;
-    private DigitalChannel digitalTouch = null;
+
+
+    private DigitalChannel limitLow = null;
+    private DigitalChannel limitHigh = null;
 
     ColorSensor sensorColor = null;
     DistanceSensor sensorDistance = null;
 
-    static final double DISTANCE_TO_SAFEZONE    = 24.0;
-    static final double AUTONOMOUS_SPEED        = 0.8;
+
+    static final double AUTONOMOUS_SPEED        = 0.6;
 
     static final double GRIPPER_OPEN     =  0.7;     // Maximum rotational position
     static final double GRIPPER_CLOSED     =  0.5;     // Minimum rotational position
     static final double IDLE_GRIPPER        =  GRIPPER_OPEN;
 
 
-    static final double     COUNTS_PER_MOTOR_REV    = 1440 ;    // eg: TETRIX Motor Encoder
-    static final double     DRIVE_GEAR_REDUCTION    = 1.0 ;     // This is < 1.0 if geared UP
-    static final double     BOBIN_CIRCUMFERENCE     = 2.525 ;     // For figuring circumference
-    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) / BOBIN_CIRCUMFERENCE;
+    static final double     REV_COUNTS_PER_MOTOR_REV            = 1200;                // eg: REV Motor Encoder
+    static final double     PROPULSION_DRIVE_GEAR_REDUCTION     = 2.0;       // This is < 1.0 if geared UP
+    static final double     WHEEL_CIRCUMFERENCE                 = 4.0 * 3.14159;    // For figuring circumference
+    static final double     PROPULSION_COUNTS_PER_INCH          = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
+    static final double     DISTANCE_TO_SAFEZONE                = 24.0;
+    static final double     TURN_DISTANCE                       = 1.5;
+
+    static final double     TETRIX_COUNTS_PER_MOTOR_REV         = 1440 ;    // eg: TETRIX Motor Encoder
+    static final double     ARM_DRIVE_GEAR_REDUCTION            = 1.0 ;     // This is < 1.0 if geared UP
+    static final double     BOBIN_CIRCUMFERENCE                 = 2.525 ;     // For figuring circumference
+    static final double     ARM_COUNTS_PER_INCH                 = (TETRIX_COUNTS_PER_MOTOR_REV * ARM_DRIVE_GEAR_REDUCTION) / BOBIN_CIRCUMFERENCE;
+
     static final double     DRIVE_SPEED             = 0.6;
     static final double     TURN_SPEED              = 0.5;
 
@@ -95,6 +106,8 @@ public class BasicOpMode_IterativeTester extends OpMode
     static final double     THIRD_FLOOR             = 12.0; // height in inches
     static final double     FOURTH_FLOOR            = 18.0; // height in inches
     static final double     OPTIMAL_ARM_SPEED       = 1.0;
+
+
 
     private boolean gripperClosed                   = false;
 
@@ -108,14 +121,19 @@ public class BasicOpMode_IterativeTester extends OpMode
 
     private byte armStatus                          = STATUS_MANUAL;
 
-
-    private double schedule;
+    /********************************************
+    AUTONOMOUS tasks
+    *********************************************/
+    /* Go to safe zone */
+    private double goToSafeZoneCompletionTime       = 0.0;
+    private byte    safeZoneStatus                  = 0;
 
     /*
      * Code to run ONCE when the driver hits INIT
      */
     @Override
     public void init() {
+
 
         telemetry.addData("Status", "Initializing...");
 
@@ -132,7 +150,12 @@ public class BasicOpMode_IterativeTester extends OpMode
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
         leftDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         rightDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         /* ************************************
             STATUS_LIFTING ARM
@@ -143,10 +166,13 @@ public class BasicOpMode_IterativeTester extends OpMode
         lifting_arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         lifting_arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        // get a reference to our digitalTouch object.
-        digitalTouch = hardwareMap.get(DigitalChannel.class, "arm_limit");
-        // set the digital channel to input.
-        digitalTouch.setMode(DigitalChannel.Mode.INPUT);
+        // get a reference to our sensors
+        limitLow = hardwareMap.get(DigitalChannel.class, "arm_limit_down");
+        limitLow.setMode(DigitalChannel.Mode.INPUT);
+
+//        limitHigh = hardwareMap.get(DigitalChannel.class, "arm_limit_up");
+//        limitHigh.setMode(DigitalChannel.Mode.INPUT);
+
 
 
         /* ************************************
@@ -170,6 +196,8 @@ public class BasicOpMode_IterativeTester extends OpMode
         telemetry.addData("Status", "Initialized");
     }
 
+
+
     /*
      * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
      */
@@ -191,13 +219,41 @@ public class BasicOpMode_IterativeTester extends OpMode
         runtime.reset();
     }
 
+
+
     /*
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
     @Override
     public void loop() {
 
-        scheduler();
+        if ( runtime.seconds() < 30 ) {
+
+            telemetry.addData("Autonomous Mode", "On");
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+            autonomous();
+            return;
+        }
+
+        telemetry.addData("Autonomous Mode", "Off");
+
+        /* *********** EMERGENCY SITUATIONS *********************/
+        if ( lifting_arm.getPower() < 0 ) {
+            if ( limitLow.getState() == true ) {
+                telemetry.addData("Lift Status", "Going down");
+            } else {
+                lifting_arm.setPower(0);
+                telemetry.addData("Lift Status", "Lower Limit Reached");
+            }
+        }
+//        else if ( lifting_arm.getPower() > 0 ) {
+//            if ( limitHigh.getState() == true ) {
+//                telemetry.addData("Lift Status", "Going Up");
+//            } else {
+//                lifting_arm.setPower(0);
+//                telemetry.addData("Lift Status", "Upper Limit Reached");
+//            }
+//        }
 
         /* ****************** PROPULSION  ***********/
         double leftPower;
@@ -262,17 +318,14 @@ public class BasicOpMode_IterativeTester extends OpMode
                 telemetry.addData("Lift Status",  "Resetting encoder");
             }
 
-            /* ********* LEFT JOY STICK -> MANUAL MODE ********/
-            double lift_speed = -gamepad2.right_stick_y;
-             // IF we are manually lowering and touch sensor is pressed, stop the motor
-            if (  digitalTouch.getState() == true )  {
-                telemetry.addData("Lift Status", "Still have room");
+            else {
+
+                /* ********* LEFT JOY STICK -> MANUAL MODE ********/
+                double lift_speed = -gamepad2.right_stick_y;
+
+
+                lifting_arm.setPower(lift_speed);
             }
-            else if ( lift_speed < 0 ) {
-                lift_speed = 0;
-                telemetry.addData("Lift Status", "Limit Reached");
-            }
-            lifting_arm.setPower(lift_speed);
 
 
             /* ********* AUTO LIFT BUTTONS ********/
@@ -296,7 +349,7 @@ public class BasicOpMode_IterativeTester extends OpMode
             if ( armStatus == STATUS_ENGAGING ) {
 
                 lifting_arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                lifting_arm.setTargetPosition((int)(newTargetHeight * COUNTS_PER_INCH));
+                lifting_arm.setTargetPosition((int)(newTargetHeight * ARM_COUNTS_PER_INCH));
                 lifting_arm.setPower(Math.abs(OPTIMAL_ARM_SPEED));
 
                 armStatus = STATUS_LIFTING;
@@ -306,7 +359,7 @@ public class BasicOpMode_IterativeTester extends OpMode
 
         if ( armStatus == STATUS_LIFTING ) {
 
-            if ( emergencyStop() || !lifting_arm.isBusy() ) {
+            if ( emergencyStopArm() || !lifting_arm.isBusy() ) {
 
                 lifting_arm.setPower(0);
                 lifting_arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -314,7 +367,7 @@ public class BasicOpMode_IterativeTester extends OpMode
             }
         }
 
-        telemetry.addData("Lift Goal",  "%7d", (int)(newTargetHeight * COUNTS_PER_INCH));
+        telemetry.addData("Lift Goal",  "%7d", (int)(newTargetHeight * ARM_COUNTS_PER_INCH));
         telemetry.addData("Lift Current",  "%7d", lifting_arm.getCurrentPosition());
         telemetry.update();
     }
@@ -326,47 +379,120 @@ public class BasicOpMode_IterativeTester extends OpMode
     public void stop() {
     }
 
-    private boolean emergencyStop() {
+    private boolean emergencyStopArm() {
         return ( gamepad2.left_stick_button );
     }
 
+    private boolean emergencyStopPropulsion() { return ( gamepad1.left_stick_button );  }
+
     private boolean withinAcceptableRange(int a, int b) {
         if ( a <= b ) {
-            return ((b - a * 1.0) > ACCEPTABLE_RANGE_INCHES / COUNTS_PER_INCH);
+            return ((b - a * 1.0) > ACCEPTABLE_RANGE_INCHES / ARM_COUNTS_PER_INCH);
         }
-        return ((a - b * 1.0) > ACCEPTABLE_RANGE_INCHES / COUNTS_PER_INCH);
+        return ((a - b * 1.0) > ACCEPTABLE_RANGE_INCHES / ARM_COUNTS_PER_INCH);
     }
 
 
-    private void scheduler() {
-        /*
-            Look at the time table if there is something to do.
-            We will use this for the autonomous part
+    private void autonomous() {
 
-            e.g
-            for (all entries in the scheduler) {
-                if it's time {
-                    call the appropriate method
-                }
-            }
-         */
 
+        if ( runtime.seconds() > 5  ) {
+            knockJewel();
+        }
+        if ( runtime.seconds() > 15  ) {
+            goToSafeZone();
+        }
         return;
     }
 
-    private boolean goToSafeZone() {
 
-        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    private void knockJewel() {
+        return;
+    }
 
-        leftDrive.setTargetPosition((int)(DISTANCE_TO_SAFEZONE * COUNTS_PER_INCH));
-        rightDrive.setTargetPosition((int)(DISTANCE_TO_SAFEZONE * COUNTS_PER_INCH));
 
-        // Send calculated power to wheels
-        leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-        rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+    private void goToSafeZone() {
+        /*
+         * WE are done with this task
+         */
+        if ( safeZoneStatus > 3 ) {
+            return;
+        }
 
-        return false;
+        switch ( safeZoneStatus ) {
+
+            /*
+             * We are turning
+             */
+            case 0:
+                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+                leftDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                rightDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+                // Send calculated power to wheels
+                leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+                rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+
+                safeZoneStatus = 1;
+                break;
+
+            /*
+             * Verify if we are done turning
+             */
+            case 1:
+                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
+                    return;
+                }
+                /*
+                 * Assume we are done turning and stop all motion and reset the encoder
+                 */
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
+                rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                safeZoneStatus = 2;
+                break;
+
+            /*
+             * Start Movement Forward
+             */
+            case 2:
+                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+                leftDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
+                rightDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
+
+                // Send calculated power to wheels
+                leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+                rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+                safeZoneStatus = 3;
+                return;
+
+            /*
+             * Verify if we are done moving
+             */
+            case 3:
+                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
+                    return;
+                }
+                /*
+                 * Assume we are done moving and stop all motion
+                 */
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
+                leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                goToSafeZoneCompletionTime = runtime.seconds();
+                safeZoneStatus = 4;
+                break;
+        }
+        return;
     }
 
 }
