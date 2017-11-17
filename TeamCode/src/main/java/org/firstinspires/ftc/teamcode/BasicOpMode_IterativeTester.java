@@ -41,8 +41,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.util.Locale;
+import java.util.*;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -69,7 +71,6 @@ public class BasicOpMode_IterativeTester extends OpMode
     private DcMotor lifting_arm = null;
     private Servo    leftGripper    = null;
     private Servo    rightGripper   = null;
-
 
     private DigitalChannel limitLow = null;
     private DigitalChannel limitHigh = null;
@@ -102,16 +103,10 @@ public class BasicOpMode_IterativeTester extends OpMode
 
 
     static final double     FIRST_FLOOR             = 0.0;  // height in inches
-    static final double     SECOND_FLOOR            = 6.0;  // height in inches
-    static final double     THIRD_FLOOR             = 12.0; // height in inches
-    static final double     FOURTH_FLOOR            = 18.0; // height in inches
+    static final double     SECOND_FLOOR            = 7.5;  // height in inches
+    static final double     THIRD_FLOOR             = 13.5; // height in inches
+    static final double     FOURTH_FLOOR            = 19.5; // height in inches
     static final double     OPTIMAL_ARM_SPEED       = 1.0;
-
-
-
-    private boolean gripperClosed                   = false;
-
-    private double newTargetHeight                  = 0.0;
 
 
     static final byte STATUS_MANUAL                = 0;
@@ -119,7 +114,16 @@ public class BasicOpMode_IterativeTester extends OpMode
     static final byte STATUS_ENGAGING               = 2;
     static final double ACCEPTABLE_RANGE_INCHES     = 0.25;
 
+
+
+    private boolean gripperClosed                   = false;
     private byte armStatus                          = STATUS_MANUAL;
+    private double newTargetHeight                  = 0.0;
+
+
+    private ArrayList   schedule  = null;
+
+
 
     /********************************************
     AUTONOMOUS tasks
@@ -136,6 +140,13 @@ public class BasicOpMode_IterativeTester extends OpMode
 
 
         telemetry.addData("Status", "Initializing...");
+
+        /***************************************
+         *         ENTER SCHEDULE HERE
+         */
+        schedule = new ArrayList();
+        schedule.add(new AutonomousTask(this, 0.0, "knockJewel"));
+        schedule.add(new AutonomousTask(this, 20.0, "goToSafeZone"));
 
         /* ************************************
             PROPULSION MOTORS
@@ -170,8 +181,8 @@ public class BasicOpMode_IterativeTester extends OpMode
         limitLow = hardwareMap.get(DigitalChannel.class, "arm_limit_down");
         limitLow.setMode(DigitalChannel.Mode.INPUT);
 
-//        limitHigh = hardwareMap.get(DigitalChannel.class, "arm_limit_up");
-//        limitHigh.setMode(DigitalChannel.Mode.INPUT);
+        limitHigh = hardwareMap.get(DigitalChannel.class, "arm_limit_up");
+        limitHigh.setMode(DigitalChannel.Mode.INPUT);
 
 
 
@@ -242,18 +253,29 @@ public class BasicOpMode_IterativeTester extends OpMode
             if ( limitLow.getState() == true ) {
                 telemetry.addData("Lift Status", "Going down");
             } else {
+                armStatus = STATUS_MANUAL;
                 lifting_arm.setPower(0);
+                lifting_arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                 telemetry.addData("Lift Status", "Lower Limit Reached");
             }
         }
-//        else if ( lifting_arm.getPower() > 0 ) {
-//            if ( limitHigh.getState() == true ) {
-//                telemetry.addData("Lift Status", "Going Up");
-//            } else {
-//                lifting_arm.setPower(0);
-//                telemetry.addData("Lift Status", "Upper Limit Reached");
-//            }
-//        }
+        else if ( lifting_arm.getPower() > 0 ) {
+            if ( limitHigh.getState() == true ) {
+                telemetry.addData("Lift Status", "Going Up");
+            } else {
+                armStatus = STATUS_MANUAL;
+                lifting_arm.setPower(0);
+                lifting_arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                telemetry.addData("Lift Status", "Upper Limit Reached");
+            }
+        }
+
+        if ( emergencyStopArm() ) {
+            lifting_arm.setPower(0);
+            lifting_arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            armStatus = STATUS_MANUAL;
+        }
+
 
         /* ****************** PROPULSION  ***********/
         double leftPower;
@@ -271,8 +293,8 @@ public class BasicOpMode_IterativeTester extends OpMode
 
         // Tank Mode uses one stick to control each wheel.
         // - This requires no math, but it is hard to drive forward slowly and keep straight.
-         leftPower  = -gamepad1.right_stick_y ;
-         rightPower = -gamepad1.left_stick_y ;
+        rightPower  = -gamepad1.right_stick_y ;
+        leftPower   = -gamepad1.left_stick_y ;
 
         // Send calculated power to wheels
         leftDrive.setPower(leftPower);
@@ -306,8 +328,7 @@ public class BasicOpMode_IterativeTester extends OpMode
         }
 
         /* **************** ARM MOVEMENT*****************************************/
-        if ( armStatus == STATUS_MANUAL ) {
-
+        if ( armStatus != STATUS_LIFTING ) {
 
             /* ********* RIGHT STICK BUTTON RESET ******************************/
             if ( gamepad2.right_stick_button ) {
@@ -319,12 +340,14 @@ public class BasicOpMode_IterativeTester extends OpMode
             }
 
             else {
-
                 /* ********* LEFT JOY STICK -> MANUAL MODE ********/
                 double lift_speed = -gamepad2.right_stick_y;
 
-
-                lifting_arm.setPower(lift_speed);
+                // Only if the movement is allowed
+                if (!( (lift_speed > 0 && !limitHigh.getState()) || (lift_speed < 0 && !limitLow.getState()) ) ) {
+                    telemetry.addData("Lift Status", "Going Up");
+                    lifting_arm.setPower(lift_speed);
+                }
             }
 
 
@@ -356,11 +379,9 @@ public class BasicOpMode_IterativeTester extends OpMode
             }
         }
 
-
         if ( armStatus == STATUS_LIFTING ) {
-
-            if ( emergencyStopArm() || !lifting_arm.isBusy() ) {
-
+            // We have reached pre-programmed position
+            if ( !lifting_arm.isBusy() ) {
                 lifting_arm.setPower(0);
                 lifting_arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                 armStatus = STATUS_MANUAL;
@@ -379,36 +400,66 @@ public class BasicOpMode_IterativeTester extends OpMode
     public void stop() {
     }
 
+
+
     private boolean emergencyStopArm() {
         return ( gamepad2.left_stick_button );
     }
 
     private boolean emergencyStopPropulsion() { return ( gamepad1.left_stick_button );  }
 
-    private boolean withinAcceptableRange(int a, int b) {
-        if ( a <= b ) {
-            return ((b - a * 1.0) > ACCEPTABLE_RANGE_INCHES / ARM_COUNTS_PER_INCH);
-        }
-        return ((a - b * 1.0) > ACCEPTABLE_RANGE_INCHES / ARM_COUNTS_PER_INCH);
-    }
-
-
     private void autonomous() {
 
-
-        if ( runtime.seconds() > 5  ) {
-            knockJewel();
-        }
-        if ( runtime.seconds() > 15  ) {
+//        if ( runtime.seconds() > 5  ) {
+//            knockJewel();
+//        }
+        if ( runtime.seconds() > 10  ) {
             goToSafeZone();
         }
         return;
     }
 
 
-    private void knockJewel() {
-        return;
-    }
+//    private void knockJewel() {
+//
+//        if ( knockJewelStatus > 3 ) {
+//            return;
+//        }
+//
+//        switch ( knockJewelStatus ) {
+//
+//            /*
+//             * Lower the arm
+//             */
+//            case 0:
+//                knockJewelStatus = 1;
+//                break;
+//
+//
+//            /*
+//             * Detect color
+//             */
+//            case 1:
+//                knockJewelStatus = 2;
+//                break;
+//
+//            /*
+//             * Knock the Jewel
+//             */
+//            case 2:
+//                knockJewelStatus = 3;
+//                break;
+//
+//            /*
+//             * Lift Up the Arm
+//             */
+//            case 3:
+//                knockJewelStatus = 4;
+//                break;
+//
+//        }
+//        return;
+//    }
 
 
     private void goToSafeZone() {
