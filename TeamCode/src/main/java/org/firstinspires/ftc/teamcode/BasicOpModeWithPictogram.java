@@ -29,6 +29,7 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorSensor;
@@ -68,8 +69,8 @@ import java.util.Locale;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Iterative OpMode With VuMark", group="Iterative Opmode")
-//@Disabled
+@TeleOp(name="Basic: Iterative OpMode With VuMark", group="Concept")
+@Disabled
 public class BasicOpModeWithPictogram extends OpMode
 {
     // Declare OpMode members.

@@ -38,13 +38,11 @@ import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+import java.util.ArrayList;
 import java.util.Locale;
-import java.util.*;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -59,10 +57,9 @@ import java.util.*;
  * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
-
-@TeleOp(name="Basic: Iterative OpMode Tester", group="Iterative")
-@Disabled
-public class BasicOpMode_IterativeTester extends OpMode
+@TeleOp(name="Iterative: Final", group="Iterative")
+//@Disabled
+public class BasicOpMode_IterativeFinal extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -121,17 +118,6 @@ public class BasicOpMode_IterativeTester extends OpMode
     private double newTargetHeight                  = 0.0;
 
 
-    private ArrayList   schedule  = null;
-
-
-
-    /********************************************
-    AUTONOMOUS tasks
-    *********************************************/
-    /* Go to safe zone */
-    private double goToSafeZoneCompletionTime       = 0.0;
-    private byte    safeZoneStatus                  = 0;
-
     /*
      * Code to run ONCE when the driver hits INIT
      */
@@ -140,13 +126,6 @@ public class BasicOpMode_IterativeTester extends OpMode
 
 
         telemetry.addData("Status", "Initializing...");
-
-        /***************************************
-         *         ENTER SCHEDULE HERE
-         */
-        schedule = new ArrayList();
-        schedule.add(new AutonomousTask(this, 0.0, "knockJewel"));
-        schedule.add(new AutonomousTask(this, 20.0, "goToSafeZone"));
 
         /* ************************************
             PROPULSION MOTORS
@@ -162,11 +141,11 @@ public class BasicOpMode_IterativeTester extends OpMode
         // Reverse the motor that runs backwards when connected directly to the battery
         leftDrive.setDirection(DcMotor.Direction.FORWARD);
         leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         rightDrive.setDirection(DcMotor.Direction.REVERSE);
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         /* ************************************
             STATUS_LIFTING ARM
@@ -237,14 +216,6 @@ public class BasicOpMode_IterativeTester extends OpMode
      */
     @Override
     public void loop() {
-
-        if ( runtime.seconds() < 30 ) {
-
-            telemetry.addData("Autonomous Mode", "On");
-            telemetry.addData("Status", "Run Time: " + runtime.toString());
-            autonomous();
-            return;
-        }
 
         telemetry.addData("Autonomous Mode", "Off");
 
@@ -400,150 +371,9 @@ public class BasicOpMode_IterativeTester extends OpMode
     public void stop() {
     }
 
-
-
     private boolean emergencyStopArm() {
         return ( gamepad2.left_stick_button );
     }
-
     private boolean emergencyStopPropulsion() { return ( gamepad1.left_stick_button );  }
-
-    private void autonomous() {
-
-//        if ( runtime.seconds() > 5  ) {
-//            knockJewel();
-//        }
-        if ( runtime.seconds() > 10  ) {
-            goToSafeZone();
-        }
-        return;
-    }
-
-
-//    private void knockJewel() {
-//
-//        if ( knockJewelStatus > 3 ) {
-//            return;
-//        }
-//
-//        switch ( knockJewelStatus ) {
-//
-//            /*
-//             * Lower the arm
-//             */
-//            case 0:
-//                knockJewelStatus = 1;
-//                break;
-//
-//
-//            /*
-//             * Detect color
-//             */
-//            case 1:
-//                knockJewelStatus = 2;
-//                break;
-//
-//            /*
-//             * Knock the Jewel
-//             */
-//            case 2:
-//                knockJewelStatus = 3;
-//                break;
-//
-//            /*
-//             * Lift Up the Arm
-//             */
-//            case 3:
-//                knockJewelStatus = 4;
-//                break;
-//
-//        }
-//        return;
-//    }
-
-
-    private void goToSafeZone() {
-        /*
-         * WE are done with this task
-         */
-        if ( safeZoneStatus > 3 ) {
-            return;
-        }
-
-        switch ( safeZoneStatus ) {
-
-            /*
-             * We are turning
-             */
-            case 0:
-                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-                leftDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                rightDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-
-                // Send calculated power to wheels
-                leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-                rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-
-                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
-
-                safeZoneStatus = 1;
-                break;
-
-            /*
-             * Verify if we are done turning
-             */
-            case 1:
-                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
-                    return;
-                }
-                /*
-                 * Assume we are done turning and stop all motion and reset the encoder
-                 */
-                leftDrive.setPower(0);
-                rightDrive.setPower(0);
-                rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                safeZoneStatus = 2;
-                break;
-
-            /*
-             * Start Movement Forward
-             */
-            case 2:
-                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-                leftDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
-                rightDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
-
-                // Send calculated power to wheels
-                leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-                rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-
-                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
-                safeZoneStatus = 3;
-                return;
-
-            /*
-             * Verify if we are done moving
-             */
-            case 3:
-                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
-                    return;
-                }
-                /*
-                 * Assume we are done moving and stop all motion
-                 */
-                leftDrive.setPower(0);
-                rightDrive.setPower(0);
-                leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                goToSafeZoneCompletionTime = runtime.seconds();
-                safeZoneStatus = 4;
-                break;
-        }
-        return;
-    }
 
 }
