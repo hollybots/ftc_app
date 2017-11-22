@@ -32,7 +32,6 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  org.firstinspires.ftc.teamcode.BasicOpMode_Autonomous;
 
-
 /**
  */
 
@@ -41,8 +40,7 @@ import  org.firstinspires.ftc.teamcode.BasicOpMode_Autonomous;
 public class BasicOpMode_Autonomous_RedRight extends BasicOpMode_Autonomous {
 
     BasicOpMode_Autonomous_RedRight() {
-        ourColor = RED;
-        ourSafeZone = RIGHT;
+        ourPosition = RED_RIGHT;
     }
 }
 

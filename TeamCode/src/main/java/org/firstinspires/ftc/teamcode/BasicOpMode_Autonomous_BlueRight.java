@@ -41,8 +41,7 @@ import  org.firstinspires.ftc.teamcode.BasicOpMode_Autonomous;
 public class BasicOpMode_Autonomous_BlueRight extends BasicOpMode_Autonomous {
 
     BasicOpMode_Autonomous_BlueRight() {
-        ourColor = BLUE;
-        ourSafeZone = RIGHT;
+        ourPosition = BLUE_RIGHT;
     }
 
 }

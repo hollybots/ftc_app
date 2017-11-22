@@ -29,103 +29,95 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
 
 /**
+ * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
+ * the autonomous or the teleop period of an FTC match. The names of OpModes appear on the menu
+ * of the FTC Driver Station. When an selection is made from the menu, the corresponding OpMode
+ * class is instantiated on the Robot Controller and executed.
+ *
+ * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
+ * It includes all the skeletal structure that all linear OpModes contain.
+ *
+ * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
+ * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-//@Autonomous(name="Scheduled: Go To Safe Zone - Right", group="Scheduled")
+@Autonomous(name="Scheduled: Go To Safe Zone - Left", group="Scheduled")
 //@Disabled
 public class BasicOpMode_Autonomous extends LinearOpMode {
 
-    static final int RIGHT      = 0;
-    static final int LEFT       = 1;
 
-    static final int RED        = 0;
-    static final int BLUE       = 1;
+    protected static final byte BLUE_LEFT   = 0;
+    protected static final byte BLUE_RIGHT  = 1;
+    protected static final byte RED_LEFT    = 2;
+    protected static final byte RED_RIGHT   = 3;
 
-    static final double     JEWEL_ARM_UP                        =  1;
-    static final double     JEWEL_ARM_DOWN                      =  0.5;
-    static final double     JEWEL_ARM_IDLE                      =  JEWEL_ARM_UP;
-
-    static final double     JEWEL_KNOCKER_CENTER                =  0.5;
-    static final double     JEWEL_KNOCKER_FORWARD               =  0.8;     // NOTE: Forward is always the side of the sensor
-    static final double     JEWEL_KNOCKER_REVERSE               =  0.3;
-
-    static final double     GRIPPER_OPEN                        =  0.7;     // Maximum rotational position
-    static final double     GRIPPER_CLOSED                      =  0.5;     // Minimum rotational position
-    static final double     IDLE_GRIPPER                        =  GRIPPER_OPEN;
-
-    static final double     REV_COUNTS_PER_MOTOR_REV            = 1200;                // eg: REV Motor Encoder
-    static final double     PROPULSION_DRIVE_GEAR_REDUCTION     = 2.0;       // This is < 1.0 if geared UP
-    static final double     WHEEL_CIRCUMFERENCE                 = 4.0 * 3.14159;    // For figuring circumference
-    static final double     PROPULSION_COUNTS_PER_INCH          = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
-    static final double     DISTANCE_TO_SAFEZONE                = 38.0;
-    static final double     TURN_DISTANCE                       = 1.5;
+//    private  static final String CENTER     = "CENTER";
+//    private static final  String RIGHT      = "RIGHT";
+//    private  static final String LEFT       = "LEFT";
 
 
-    static final double     TETRIX_COUNTS_PER_MOTOR_REV         = 1440 ;    // eg: TETRIX Motor Encoder
-    static final double     ARM_DRIVE_GEAR_REDUCTION            = 1.0 ;     // This is < 1.0 if geared UP
-    static final double     BOBIN_CIRCUMFERENCE                 = 2.525 ;     // For figuring circumference
-    static final double     ARM_COUNTS_PER_INCH                 = (TETRIX_COUNTS_PER_MOTOR_REV * ARM_DRIVE_GEAR_REDUCTION) / BOBIN_CIRCUMFERENCE;
+    private static final double REV_COUNTS_PER_MOTOR_REV = 1200;                // eg: REV Motor Encoder
+    private static final double PROPULSION_DRIVE_GEAR_REDUCTION = 2.0;       // This is < 1.0 if geared UP
+    private static final double WHEEL_CIRCUMFERENCE = 4.0 * 3.14159;    // For figuring circumference
+    private static final double PROPULSION_COUNTS_PER_INCH = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
+    private static final double DISTANCE_TO_SAFEZONE = 38.0;
+    private static final double TURN_DISTANCE = 1.5;
 
-    static final double     AUTONOMOUS_SPEED                        = 0.6;
+    private static final double AUTONOMOUS_SPEED = 0.6;
 
-    static final double     FIRST_GLYPH_HEIGHT                      = 6.0;
-    static final double     OPTIMAL_ARM_SPEED                       = 1.0;
+    // Declare Autonomous OpMode hardware.
 
-    /**
-     * HARDWARE MAP
-     */
     private DcMotor leftDrive = null;
     private DcMotor rightDrive = null;
-    private  DcMotor lifting_arm = null;
-
-    private Servo   jewelArm    = null;
-    private Servo   jewelKnocker= null;
-
-    private DigitalChannel limitLow = null;
-    private DigitalChannel limitHigh = null;
-
-    private ColorSensor sensorColor = null;
-    private DistanceSensor sensorDistance = null;
-
-    private Servo    leftGripper    = null;
-    private Servo    rightGripper   = null;
 
 
     /**
-     * VUFORIA stuff
+     * Declare VUFORIA classes
      */
     private VuforiaLocalizer vuforia;
     private VuforiaTrackables relicTrackables;
     private VuforiaTrackable relicTemplate;
 
-    /**
-     * Class members
-     */
+
+    /********************************************
+     AUTONOMOUS tasks
+     *********************************************/
+
+    protected byte ourPosition                = RED_RIGHT;
+
     private ElapsedTime runtime = new ElapsedTime();
 
-    //The following values are set in the Subclass DONT MODIFY THEM HERE
-    //see the corresponding BasicOpMode_Autonomous_xxxxxxxxxx files for that
+    /* Go to safe zone */
+    private double goToSafeZoneCompletionTime = 0.0;
+    private byte safeZoneStatus = 0;
 
-    protected int ourColor              = -1;
-    protected int ourSafeZone           = -1;
+    /* First Glyph Challenge */
+    private byte firstGlyphStatus = 0;
+    private static boolean didFirstGlyph    = false;
+
 
 
 
@@ -139,7 +131,7 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
+        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
 
 
@@ -155,38 +147,7 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
 
 
         /***********************************************
-         * COLOR SENSORS
-         */
-        sensorColor = hardwareMap.get(ColorSensor.class, "color_distance_sensor");
-        sensorDistance = hardwareMap.get(DistanceSensor.class, "color_distance_sensor");
-
-
-
-        /* ************************************
-         * GLYPH GRIPPER
-         */
-        rightGripper = hardwareMap.get(Servo.class, "right_gripper");
-        leftGripper  = hardwareMap.get(Servo.class, "left_gripper");
-
-        rightGripper.setPosition(IDLE_GRIPPER);
-        leftGripper.setPosition(1.0 - IDLE_GRIPPER);
-
-
-        telemetry.addData("Status", "Initialized");
-        telemetry.update();
-
-        // Wait for the game to start (driver presses PLAY)
-        waitForStart();
-        runtime.reset();
-
-
-
-        /***********************************************
          * VIEW MARK (this is used to decrypt pictogram and decide which columns we are going to put our glyph in)
-         */
-        /*
-         * To start up Vuforia, tell it the view that we wish to use for camera monitor (on the RC phone);
-         * If no camera monitor is desired, use the parameterless constructor instead (commented out below).
          */
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
@@ -196,277 +157,305 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
         parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
         this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
 
+
+        /* ***************** WAITING FOR START BUTTON ******************/
+
+        telemetry.addData("Status", "Initialized");
+        telemetry.update();
+
+        // Wait for the game to start (driver presses PLAY)
+        waitForStart();
+        runtime.reset();
+
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
-            telemetry.addData("Status", "Still Running...");
+            telemetry.addData("Status", "Running");
+/*
+            if (runtime.seconds() > 10) {
+                telemetry.addData("Status", "SafeZone");
+                goToSafeZone();
+            }
+*/
 
-            telemetry.addData("Status", "Jewel Knock");
-            knockJewel();
+            if ( !didFirstGlyph ) {
 
-            telemetry.addData("Status", "VuMark Decryption");
-            placeGlyphInDecrypedLocation();
+                didFirstGlyph = true;
+                firstGlyph();
 
-            telemetry.addData("Status", "SafeZone");
-            goToSafeZone();
+            }
 
-            break;
+            telemetry.update();
         }
     }
 
 
-    private void goToSafeZone() {
+    private void move( double left , double right) {
 
-        byte    status               = 0;
+
+        leftDrive.setTargetPosition((int) (left * PROPULSION_COUNTS_PER_INCH));
+        rightDrive.setTargetPosition((int) (right * PROPULSION_COUNTS_PER_INCH));
+
+        leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+        rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+        while ( leftDrive.isBusy() && rightDrive.isBusy()) {
+            telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+            idle();
+            telemetry.update();
+        }
+
+        leftDrive.setPower(0);
+        rightDrive.setPower(0);
+        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        telemetry.update();
+        return;
+    }
+
+
+
+    private void firstGlyph() {
+
+        RelicRecoveryVuMark vuMark;
 
         /*
-         * WE are done with this task when status = 4
+        Detect pictogram
+        */
+        vuMark = RelicRecoveryVuMark.from(relicTemplate);
+        while ( vuMark == RelicRecoveryVuMark.UNKNOWN ) {
+            telemetry.addData("VuMark", "not visible");
+            vuMark = RelicRecoveryVuMark.from(relicTemplate);
+            idle();
+            telemetry.update();
+        }
+        telemetry.addData("VuMark", "%s visible", vuMark);
+        telemetry.update();
+
+
+        /*
+        Grab Block
+        */
+
+
+
+        /*
+        Position the robot
          */
-        while ( status <= 3 ) {
+        if ( ourPosition == BLUE_LEFT ) {
 
-            switch (status) {
+            switch (vuMark) {
 
-                /*
-                 * We are turning
-                 */
-                case 0:
-                    leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                case CENTER:
 
-                    if ( ourSafeZone == LEFT ) {
-
-                        leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                        rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                    } else {
-
-                        leftDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                        rightDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                    }
-
-                    // Send calculated power to wheels
-                    leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-                    rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-
-                    telemetry.addData("Autonomous Propulsion:", " Started %7d", leftDrive.getTargetPosition());
-
-                    status = 1;
+                    move(33.6,33.6);
+                    move(-13,13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Verify if we are done turning
-                 */
-                case 1:
-                    if (leftDrive.isBusy() && rightDrive.isBusy()) {
-                        break;
-                    }
-                    /*
-                     * Assume we are done turning and stop all motion and reset the encoder
-                     */
-                    leftDrive.setPower(0);
-                    rightDrive.setPower(0);
-                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    status = 2;
+                case LEFT:
+
+                    move(28.8,28.8);
+                    move(-13,13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Start Movement Forward
-                 */
-                case 2:
-                    leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                case RIGHT:
 
-                    leftDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
-                    rightDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
-
-                    // Send calculated power to wheels
-                    leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-                    rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-
-                    telemetry.addData("Autonomous Propulsion:", " Started %7d", leftDrive.getTargetPosition());
-                    status = 3;
-                    break;
-
-                /*
-                 * Verify if we are done moving
-                 */
-                case 3:
-                    if (leftDrive.isBusy() && rightDrive.isBusy()) {
-                        break;
-                    }
-                    /*
-                     * Assume we are done moving and stop all motion
-                     */
-                    leftDrive.setPower(0);
-                    rightDrive.setPower(0);
-                    leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    status = 4;
+                    move(38.4,38.4);
+                    move(-13,13);
+                    move(18,18);
                     break;
             }
-            telemetry.update();
+        }
 
-        } /* while */
+        else if ( ourPosition == BLUE_RIGHT ) {
 
-        return;
-    }
+            switch (vuMark) {
 
+                case CENTER:
 
-    private void placeGlyphInDecrypedLocation() {
-
-        byte    status             = 0;
-
-        while ( status <= 2 ) {
-
-            switch ( status ) {
-
-                /*
-                 * Decrypt pictogram
-                 */
-                case 0:
-                    status = 1;
+                    move(24,24);
+                    move(13,-13);
+                    move(9.6,9.6);
+                    move(-13,13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Pickup Glyph
-                 */
-                case 1:
-                    // Close gripper
-                    rightGripper.setPosition(GRIPPER_CLOSED);
-                    leftGripper.setPosition(1 - GRIPPER_CLOSED);
-                    sleep(500);
-                    //lift arm
-                    lifting_arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    lifting_arm.setTargetPosition((int)(FIRST_GLYPH_HEIGHT * ARM_COUNTS_PER_INCH));
-                    lifting_arm.setPower(Math.abs(OPTIMAL_ARM_SPEED));
-                    status = 2;
+                case LEFT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(4.8,4.8);
+                    move(-13,13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Waiting for arm to rise
-                 */
-                case 2:
-                    if (lifting_arm.isBusy() ) {
-                        break;
-                    }
-                    lifting_arm.setPower(0);
-                    lifting_arm.setPower(0);
-                    lifting_arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    status = 3;
+                case RIGHT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(14.4,14.4);
+                    move(-13,13);
+                    move(18,18);
+                    break;
+            }
+
+        }
+
+        else if ( ourPosition == RED_LEFT ) {
+
+            switch (vuMark){
+
+                case CENTER:
+
+                    move(24,24);
+                    move(-13,13);
+                    move(9.6,9.6);
+                    move(13,-13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Travelling
-                 */
-                case 3:
-                    break;
-                /*
-                 * Travel Second Path
-                 */
-                case 4:
-                    break;
-                /*
-                 * Travel Third Path
-                 */
-                case 5:
+                case RIGHT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(4.8,4.8);
+                    move(13,-13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Release the glyph
-                 */
-                case 6:
-                    rightGripper.setPosition(GRIPPER_OPEN);
-                    leftGripper.setPosition(1 - GRIPPER_OPEN);
-                    status = 7;
+                case LEFT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(14.4,14.4);
+                    move(13,-13);
+                    move(18,18);
                     break;
 
             }
+        }
 
-            telemetry.update();
+        else if ( ourPosition == RED_RIGHT ) {
 
-        } /* while */
+            switch (vuMark) {
 
-        return;
+                case CENTER:
 
-    }
-
-    private void knockJewel() {
-
-        byte    knockJewelStatus             = 0;
-        double  knockPosition                = 0.0;
-
-
-
-        while ( knockJewelStatus <= 2 ) {
-
-            switch ( knockJewelStatus ) {
-
-                /*
-                 * Lower the arm
-                 */
-                case 0:
-                    jewelArm.setPosition(JEWEL_ARM_DOWN);
-                    //sleep(1000);
-                    knockJewelStatus = 1;
+                    move(33.6,33.6);
+                    move(13,-13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Detect color (wait until we have a difference of at least 10 between red and blue)
-                 */
-                case 1:
-                    int r = sensorColor.red();
-                    int b = sensorColor.blue();
+                case RIGHT:
 
-                    // If our color is red and we detect red
-                    if ( ( ourColor == RED ) && ( r > b ) &&  (r - b > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_FORWARD;
-                        knockJewelStatus = 2;
-                    }
-
-                    // If our color is blue and we detect blue
-                    else if ( ( ourColor == BLUE ) && ( b > r ) &&  (b - r > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_FORWARD;
-                        knockJewelStatus = 2;
-                    }
-
-                    // If our color is red and we detect blue
-                    if ( ( ourColor == RED ) && ( b > r ) &&  (b - r > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_REVERSE;
-                        knockJewelStatus = 2;
-                    }
-
-                    // If our color is blue and we detect red
-                    else if ( ( ourColor == BLUE ) && ( r > b ) &&  (r - b > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_REVERSE;
-                        knockJewelStatus = 2;
-                    }
-
-                    /* Otherwise we give it more time */
-                    telemetry.addData("Red  ", sensorColor.red());
-                    telemetry.addData("Green", sensorColor.green());
-                    telemetry.addData("Blue ", sensorColor.blue());
+                    move(28.8,28.8);
+                    move(13,-13);
+                    move(18,18);
                     break;
 
-                /*
-                 * Knock the Jewel and lift arm
-                 */
-                case 2:
-                    // Activate the jewel Knocker and retract arm
-                    jewelKnocker.setPosition(knockPosition);
-                    sleep(2000);
-                    jewelArm.setPosition(JEWEL_ARM_UP);
-                    jewelKnocker.setPosition(JEWEL_KNOCKER_CENTER);
-                    knockJewelStatus = 3;
-                    break;
+                case LEFT:
 
+                    move(38.4,38.4);
+                    move(13,-13);
+                    move(18,18);
+                    break;
             }
-
-            telemetry.update();
-
-        } /* while */
-
-        return;
-
+        }
     }
 
+
+
+    private void goToSafeZone() {
+        /*
+         * WE are done with this task
+         */
+        if ( safeZoneStatus > 3 ) {
+            return;
+        }
+
+        switch ( safeZoneStatus ) {
+
+            /*
+             * We are turning
+             */
+            case 0:
+                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+                if ( ourPosition == RED_LEFT  || ourPosition == BLUE_LEFT ) {
+
+                    leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                    rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                } else {
+
+                    leftDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                    rightDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                }
+
+                // Send calculated power to wheels
+                leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+                rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+
+                safeZoneStatus = 1;
+                return;
+
+            /*
+             * Verify if we are done turning
+             */
+            case 1:
+                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
+                    return;
+                }
+                /*
+                 * Assume we are done turning and stop all motion and reset the encoder
+                 */
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
+                rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                safeZoneStatus = 2;
+                return;
+
+            /*
+             * Start Movement Forward
+             */
+            case 2:
+                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+                leftDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
+                rightDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
+
+                // Send calculated power to wheels
+                leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+                rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+                safeZoneStatus = 3;
+                return;
+
+            /*
+             * Verify if we are done moving
+             */
+            case 3:
+                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
+                    return;
+                }
+                /*
+                 * Assume we are done moving and stop all motion
+                 */
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
+                leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                goToSafeZoneCompletionTime = runtime.seconds();
+                safeZoneStatus = 4;
+                break;
+        }
+        return;
+    }
 
 }

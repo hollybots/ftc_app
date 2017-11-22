@@ -40,8 +40,7 @@ import  org.firstinspires.ftc.teamcode.BasicOpMode_Autonomous;
 public class BasicOpMode_Autonomous_RedLeft extends BasicOpMode_Autonomous {
 
     BasicOpMode_Autonomous_RedLeft() {
-        ourColor = RED;
-        ourSafeZone = LEFT;
+        ourPosition = RED_LEFT;
     }
 
 }

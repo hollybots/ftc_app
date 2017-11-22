@@ -55,8 +55,8 @@ import com.qualcomm.robotcore.util.Range;
 //@Disabled
 public class BasicOpMode_LinearFinal extends LinearOpMode {
 
-    private static final boolean LEFT = true;
-    private static boolean didFirstGlyph = false;
+//    private static final boolean LEFT = true;
+
 
     private static final byte BLUE_LEFT = 0;
     private static final byte BLUE_RIGHT = 1;
@@ -65,7 +65,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
 
     private  static final String CENTER = "CENTER";
     private static final  String RIGHT = "RIGHT";
-    private  static final String LEFT1 = "LEFT1";
+    private  static final String LEFT = "LEFT";
 
 
     private static final double REV_COUNTS_PER_MOTOR_REV = 1200;                // eg: REV Motor Encoder
@@ -93,8 +93,9 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
     private byte safeZoneStatus = 0;
     private byte firstGlyphStatus = 0;
 
-    private byte ourPosition = RED_RIGHT;
-    private String whatVuForiaReturns = LEFT1;
+    private byte ourPosition                = RED_RIGHT;
+    private String whatVuForiaReturns       = LEFT;
+    private static boolean didFirstGlyph    = false;
 
     @Override
     public void runOpMode() {
@@ -130,6 +131,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
+
             telemetry.addData("Status", "Running");
 /*
             if (runtime.seconds() > 10) {
@@ -137,11 +139,13 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                 goToSafeZone();
             }
 */
-            if ( !didFirstGlyph ) {
-                firstGlyph();
-                didFirstGlyph = true;
-            }
 
+            if ( !didFirstGlyph ) {
+
+                didFirstGlyph = true;
+                firstGlyph();
+
+            }
 
             telemetry.update();
         }
@@ -149,6 +153,8 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
 
 
     private void move( double left , double right) {
+
+
         leftDrive.setTargetPosition((int) (left * PROPULSION_COUNTS_PER_INCH));
         rightDrive.setTargetPosition((int) (right * PROPULSION_COUNTS_PER_INCH));
 
@@ -168,12 +174,18 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
         return;
     }
 
+
+
     private void firstGlyph() {
 
-         /* Distance */
+
+        /*
+        Position the robot
+         */
+
         if ( ourPosition == BLUE_LEFT ) {
 
-            switch (whatVuForiaReturns){
+            switch (whatVuForiaReturns) {
 
                 case CENTER:
 
@@ -182,7 +194,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                     move(18,18);
                     break;
 
-                case LEFT1:
+                case LEFT:
 
                     move(28.8,28.8);
                     move(-13,13);
@@ -195,14 +207,13 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                     move(-13,13);
                     move(18,18);
                     break;
-
-
             }
         }
 
         else if ( ourPosition == BLUE_RIGHT ) {
 
-            switch (whatVuForiaReturns){
+            switch (whatVuForiaReturns) {
+
                 case CENTER:
 
                     move(24,24);
@@ -212,7 +223,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                     move(18,18);
                     break;
 
-                case LEFT1:
+                case LEFT:
 
                     move(24,24);
                     move(13,-13);
@@ -236,6 +247,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
         else if ( ourPosition == RED_LEFT ) {
 
             switch (whatVuForiaReturns){
+
                 case CENTER:
 
                     move(24,24);
@@ -254,7 +266,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                     move(18,18);
                     break;
 
-                case LEFT1:
+                case LEFT:
 
                     move(24,24);
                     move(13,-13);
@@ -268,7 +280,8 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
 
         else if ( ourPosition == RED_RIGHT ) {
 
-            switch (whatVuForiaReturns){
+            switch (whatVuForiaReturns) {
+
                 case CENTER:
 
                     move(33.6,33.6);
@@ -283,7 +296,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                     move(18,18);
                     break;
 
-                case LEFT1:
+                case LEFT:
 
                     move(38.4,38.4);
                     move(13,-13);
@@ -291,7 +304,6 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                     break;
             }
         }
-
     }
 
 
@@ -315,7 +327,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                 leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-                if ( LEFT ) {
+                if ( ourPosition == RED_LEFT  || ourPosition == BLUE_LEFT ) {
 
                     leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
                     rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
@@ -388,10 +400,5 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
         }
         return;
     }
-
-
-
-
-
 
 }
