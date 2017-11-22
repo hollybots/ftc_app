@@ -52,10 +52,15 @@ import com.qualcomm.robotcore.util.Range;
  */
 
 @Autonomous(name="Scheduled: Go To Safe Zone - Left", group="Scheduled")
-//@Disabled
+@Disabled
 public class BasicOpMode_LinearFinal extends LinearOpMode {
 
     static final boolean    LEFT                          = true;
+
+    static final byte   BLUE_LEFT    = 0;
+    static final byte   BLUE_RIGHT   = 1;
+    static final byte   RED_LEFT     = 2;
+    static final byte   RED_RIGHT    = 3;
 
 
     static final double     REV_COUNTS_PER_MOTOR_REV            = 1200;                // eg: REV Motor Encoder
@@ -80,6 +85,9 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
     /* Go to safe zone */
     private double goToSafeZoneCompletionTime       = 0.0;
     private byte    safeZoneStatus                  = 0;
+    private byte    firstGlyphStatus                  = 0;
+
+    private byte ourPosition = RED_RIGHT;
 
 
     @Override
@@ -124,6 +132,105 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
 
             telemetry.update();
         }
+    }
+
+
+    private void firstGlyph() {
+
+         /* Distance */
+        if ( ourPosition == BLUE_LEFT ) {
+
+            if ()
+
+            leftDrive.setTargetPosition((int) (5 * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (5 * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+        } else if ( ourPosition == BLUE_RIGHT ) {
+
+            leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+        } else if ( ourPosition == RED_LEFT ) {
+
+            leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+        } else if ( ourPosition == RED_RIGHT ) {
+
+            leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+        }
+
+        while ( leftDrive.isBusy() && rightDrive.isBusy()) {
+            telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+            idle();
+        }
+
+        leftDrive.setPower(0);
+        rightDrive.setPower(0);
+        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+
+        /* ANGLE 1 */
+        if ( ourPosition == BLUE_LEFT ) {
+
+            leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+        } else if ( ourPosition == BLUE_RIGHT ) {
+
+            leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+        } else if ( ourPosition == RED_LEFT ) {
+
+            leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+        } else if ( ourPosition == RED_RIGHT ) {
+
+            leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+            rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+
+            leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+            rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+        }
+
+        while ( leftDrive.isBusy() && rightDrive.isBusy()) {
+            telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+            idle();
+        }
+
+        leftDrive.setPower(0);
+        rightDrive.setPower(0);
+        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        /* DIRECTION 1 */
+
     }
 
 
@@ -217,6 +324,9 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
         }
         return;
     }
+
+
+
 
 
 
