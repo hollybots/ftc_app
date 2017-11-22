@@ -28,13 +28,9 @@
  */
 
 package org.firstinspires.ftc.teamcode;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.ColorSensor;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
-import com.qualcomm.robotcore.util.ElapsedTime;
+import  org.firstinspires.ftc.teamcode.BasicOpMode_Autonomous;
 
 
 /**
@@ -50,12 +46,14 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="Scheduled: Unused", group="Scheduled")
-@Disabled
-public class BasicOpMode_LinearFinalOpposite extends BasicOpMode_Autonomous {
+@Autonomous(name="Scheduled: Team Blue - Left", group="Scheduled")
+//@Disabled
+public class BasicOpMode_Autonomous_BlueLeft extends BasicOpMode_Autonomous {
 
-    protected int ourColor = RED;
-    protected int ourSafeZone = RIGHT;
+    BasicOpMode_Autonomous_BlueLeft() {
+        ourColor = BLUE;
+        ourSafeZone = RIGHT;
+    }
 
 }
 
