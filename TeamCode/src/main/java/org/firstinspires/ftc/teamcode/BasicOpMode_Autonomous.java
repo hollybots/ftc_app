@@ -64,8 +64,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@Autonomous(name="Scheduled: Go To Safe Zone - Left", group="Scheduled")
-//@Disabled
+@Autonomous(name="Scheduled: Go To Safe Zone Base Class", group="Scheduled")
+@Disabled
 public class BasicOpMode_Autonomous extends LinearOpMode {
 
 
