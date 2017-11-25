@@ -55,17 +55,27 @@ import com.qualcomm.robotcore.util.Range;
 @Disabled
 public class BasicOpMode_LinearFinal extends LinearOpMode {
 
-    static final boolean    LEFT                          = true;
+//    private static final boolean LEFT = true;
 
 
-    static final double     REV_COUNTS_PER_MOTOR_REV            = 1200;                // eg: REV Motor Encoder
-    static final double     PROPULSION_DRIVE_GEAR_REDUCTION     = 2.0;       // This is < 1.0 if geared UP
-    static final double     WHEEL_CIRCUMFERENCE                 = 4.0 * 3.14159;    // For figuring circumference
-    static final double     PROPULSION_COUNTS_PER_INCH          = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
-    static final double     DISTANCE_TO_SAFEZONE                = 38.0;
-    static final double     TURN_DISTANCE                       = 1.5;
+    private static final byte BLUE_LEFT = 0;
+    private static final byte BLUE_RIGHT = 1;
+    private static final byte RED_LEFT = 2;
+    private static final byte RED_RIGHT = 3;
 
-    static final double AUTONOMOUS_SPEED        = 0.6;
+    private  static final String CENTER = "CENTER";
+    private static final  String RIGHT = "RIGHT";
+    private  static final String LEFT = "LEFT";
+
+
+    private static final double REV_COUNTS_PER_MOTOR_REV = 1200;                // eg: REV Motor Encoder
+    private static final double PROPULSION_DRIVE_GEAR_REDUCTION = 2.0;       // This is < 1.0 if geared UP
+    private static final double WHEEL_CIRCUMFERENCE = 4.0 * 3.14159;    // For figuring circumference
+    private static final double PROPULSION_COUNTS_PER_INCH = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
+    private static final double DISTANCE_TO_SAFEZONE = 38.0;
+    private static final double TURN_DISTANCE = 1.5;
+
+    private static final double AUTONOMOUS_SPEED = 0.6;
 
 
     // Declare OpMode members.
@@ -74,13 +84,18 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
     private DcMotor rightDrive = null;
 
 
+
     /********************************************
      AUTONOMOUS tasks
      *********************************************/
     /* Go to safe zone */
-    private double goToSafeZoneCompletionTime       = 0.0;
-    private byte    safeZoneStatus                  = 0;
+    private double goToSafeZoneCompletionTime = 0.0;
+    private byte safeZoneStatus = 0;
+    private byte firstGlyphStatus = 0;
 
+    private byte ourPosition                = RED_RIGHT;
+    private String whatVuForiaReturns       = LEFT;
+    private static boolean didFirstGlyph    = false;
 
     @Override
     public void runOpMode() {
@@ -92,7 +107,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
+        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
 
 
@@ -116,15 +131,183 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
+
             telemetry.addData("Status", "Running");
-            if ( runtime.seconds() > 10  ) {
+/*
+            if (runtime.seconds() > 10) {
                 telemetry.addData("Status", "SafeZone");
                 goToSafeZone();
+            }
+*/
+
+            if ( !didFirstGlyph ) {
+
+                didFirstGlyph = true;
+                firstGlyph();
+
             }
 
             telemetry.update();
         }
     }
+
+
+    private void move( double left , double right) {
+
+
+        leftDrive.setTargetPosition((int) (left * PROPULSION_COUNTS_PER_INCH));
+        rightDrive.setTargetPosition((int) (right * PROPULSION_COUNTS_PER_INCH));
+
+        leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+        rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+
+
+        while ( leftDrive.isBusy() && rightDrive.isBusy()) {
+            telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+            idle();
+        }
+
+        leftDrive.setPower(0);
+        rightDrive.setPower(0);
+        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        return;
+    }
+
+
+
+    private void firstGlyph() {
+
+
+        /*
+        Position the robot
+         */
+
+        if ( ourPosition == BLUE_LEFT ) {
+
+            switch (whatVuForiaReturns) {
+
+                case CENTER:
+
+                    move(33.6,33.6);
+                    move(-13,13);
+                    move(18,18);
+                    break;
+
+                case LEFT:
+
+                    move(28.8,28.8);
+                    move(-13,13);
+                    move(18,18);
+                    break;
+
+                case RIGHT:
+
+                    move(38.4,38.4);
+                    move(-13,13);
+                    move(18,18);
+                    break;
+            }
+        }
+
+        else if ( ourPosition == BLUE_RIGHT ) {
+
+            switch (whatVuForiaReturns) {
+
+                case CENTER:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(9.6,9.6);
+                    move(-13,13);
+                    move(18,18);
+                    break;
+
+                case LEFT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(4.8,4.8);
+                    move(-13,13);
+                    move(18,18);
+                    break;
+
+                case RIGHT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(14.4,14.4);
+                    move(-13,13);
+                    move(18,18);
+                    break;
+            }
+
+        }
+
+        else if ( ourPosition == RED_LEFT ) {
+
+            switch (whatVuForiaReturns){
+
+                case CENTER:
+
+                    move(24,24);
+                    move(-13,13);
+                    move(9.6,9.6);
+                    move(13,-13);
+                    move(18,18);
+                    break;
+
+                case RIGHT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(4.8,4.8);
+                    move(13,-13);
+                    move(18,18);
+                    break;
+
+                case LEFT:
+
+                    move(24,24);
+                    move(13,-13);
+                    move(14.4,14.4);
+                    move(13,-13);
+                    move(18,18);
+                    break;
+
+            }
+        }
+
+        else if ( ourPosition == RED_RIGHT ) {
+
+            switch (whatVuForiaReturns) {
+
+                case CENTER:
+
+                    move(33.6,33.6);
+                    move(13,-13);
+                    move(18,18);
+                    break;
+
+                case RIGHT:
+
+                    move(28.8,28.8);
+                    move(13,-13);
+                    move(18,18);
+                    break;
+
+                case LEFT:
+
+                    move(38.4,38.4);
+                    move(13,-13);
+                    move(18,18);
+                    break;
+            }
+        }
+    }
+
+
+
 
 
     private void goToSafeZone() {
@@ -144,7 +327,7 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
                 leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-                if ( LEFT ) {
+                if ( ourPosition == RED_LEFT  || ourPosition == BLUE_LEFT ) {
 
                     leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
                     rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
@@ -217,7 +400,5 @@ public class BasicOpMode_LinearFinal extends LinearOpMode {
         }
         return;
     }
-
-
 
 }
