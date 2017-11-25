@@ -52,7 +52,7 @@ import com.qualcomm.robotcore.util.Range;
  */
 
 @Autonomous(name="Scheduled: Go To Safe Zone - Left", group="Scheduled")
-//@Disabled
+@Disabled
 public class BasicOpMode_LinearFinal extends LinearOpMode {
 
     static final boolean    LEFT                          = true;
