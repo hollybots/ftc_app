@@ -29,109 +29,109 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark;
+import org.firstinspires.ftc.robotcore.external.navigation.VuMarkInstanceId;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
+
+import java.util.Locale;
 
 
 /**
+ * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
+ * the autonomous or the teleop period of an FTC match. The names of OpModes appear on the menu
+ * of the FTC Driver Station. When an selection is made from the menu, the corresponding OpMode
+ * class is instantiated on the Robot Controller and executed.
+ *
+ * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
+ * It includes all the skeletal structure that all linear OpModes contain.
+ *
+ * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
+ * Rethis.moveStraight or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-//@Autonomous(name="Scheduled: Go To Safe Zone - Right", group="Scheduled")
+@Autonomous(name="Scheduled: Base Class", group="Scheduled")
 //@Disabled
 public class BasicOpMode_Autonomous extends LinearOpMode {
 
-    static final int RIGHT      = 0;
-    static final int LEFT       = 1;
 
-    static final int RED        = 0;
-    static final int BLUE       = 1;
+    protected static final byte BLUE_LEFT   = 0;
+    protected static final byte BLUE_RIGHT  = 1;
+    protected static final byte RED_LEFT    = 2;
+    protected static final byte RED_RIGHT   = 3;
 
-    static final double     JEWEL_ARM_UP                        =  1;
-    static final double     JEWEL_ARM_DOWN                      =  0.5;
-    static final double     JEWEL_ARM_IDLE                      =  JEWEL_ARM_UP;
-
-    static final double     JEWEL_KNOCKER_CENTER                =  0.5;
-    static final double     JEWEL_KNOCKER_FORWARD               =  0.8;     // NOTE: Forward is always the side of the sensor
-    static final double     JEWEL_KNOCKER_REVERSE               =  0.3;
-
-    static final double     GRIPPER_OPEN                        =  0.7;     // Maximum rotational position
-    static final double     GRIPPER_CLOSED                      =  0.5;     // Minimum rotational position
-    static final double     IDLE_GRIPPER                        =  GRIPPER_OPEN;
-
-    static final double     REV_COUNTS_PER_MOTOR_REV            = 1200;                // eg: REV Motor Encoder
-    static final double     PROPULSION_DRIVE_GEAR_REDUCTION     = 2.0;       // This is < 1.0 if geared UP
-    static final double     WHEEL_CIRCUMFERENCE                 = 4.0 * 3.14159;    // For figuring circumference
-    static final double     PROPULSION_COUNTS_PER_INCH          = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
-    static final double     DISTANCE_TO_SAFEZONE                = 38.0;
-    static final double     TURN_DISTANCE                       = 1.5;
+    protected static final double SPACE_BETWEEN_COLUMNS = 8.0;
 
 
-    static final double     TETRIX_COUNTS_PER_MOTOR_REV         = 1440 ;    // eg: TETRIX Motor Encoder
-    static final double     ARM_DRIVE_GEAR_REDUCTION            = 1.0 ;     // This is < 1.0 if geared UP
-    static final double     BOBIN_CIRCUMFERENCE                 = 2.525 ;     // For figuring circumference
-    static final double     ARM_COUNTS_PER_INCH                 = (TETRIX_COUNTS_PER_MOTOR_REV * ARM_DRIVE_GEAR_REDUCTION) / BOBIN_CIRCUMFERENCE;
+    private static final double REV_COUNTS_PER_MOTOR_REV = 1142;                // eg: REV Motor Encoder
+    private static final double PROPULSION_DRIVE_GEAR_REDUCTION = 2.0;       // This is < 1.0 if geared UP
+    private static final double WHEEL_CIRCUMFERENCE = 4.0 * 3.14159;    // For figuring circumference
+    private static final double PROPULSION_COUNTS_PER_INCH = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
+    private static final double DISTANCE_TO_SAFEZONE = 38.0;
+    private static final double TURN_DISTANCE = 1.5;
 
-    static final double     AUTONOMOUS_SPEED                        = 0.6;
+    private static final double DRIVE_SPEED = 0.8;
+    private static final double TURNING_SPEED = 0.3;
 
-    static final double     FIRST_GLYPH_HEIGHT                      = 6.0;
-    static final double     OPTIMAL_ARM_SPEED                       = 1.0;
+    private static final double     HEADING_THRESHOLD       = 1.0 ;      // As tight as we can make it with an integer gyro
+    private static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
+    private static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
+
+    // Declare Autonomous OpMode hardware.
+
+    private DcMotor leftDrive = null;           // left motor
+    private DcMotor rightDrive = null;          // right motor
+    private BNO055IMU gyro;                     // integrated IMU
 
     /**
-     * HARDWARE MAP
-     */
-    private DcMotor leftDrive = null;
-    private DcMotor rightDrive = null;
-    private  DcMotor lifting_arm = null;
-
-    private Servo   jewelArm    = null;
-    private Servo   jewelKnocker= null;
-
-    private DigitalChannel limitLow = null;
-    private DigitalChannel limitHigh = null;
-
-    private ColorSensor sensorColor = null;
-    private DistanceSensor sensorDistance = null;
-
-    private Servo    leftGripper    = null;
-    private Servo    rightGripper   = null;
-
-
-    /**
-     * VUFORIA stuff
+     * Declare VUFORIA classes
      */
     private VuforiaLocalizer vuforia;
     private VuforiaTrackables relicTrackables;
     private VuforiaTrackable relicTemplate;
+    private RelicRecoveryVuMark vuMark =  RelicRecoveryVuMark.CENTER;
 
-    /**
-     * Class members
-     */
+
+    /********************************************
+     AUTONOMOUS tasks
+     *********************************************/
+
+    protected byte ourPosition                = BLUE_RIGHT;
+
     private ElapsedTime runtime = new ElapsedTime();
 
-    //The following values are set in the Subclass DONT MODIFY THEM HERE
-    //see the corresponding BasicOpMode_Autonomous_xxxxxxxxxx files for that
+    /* Go to safe zone */
+    private double goToSafeZoneCompletionTime = 0.0;
+    private byte safeZoneStatus = 0;
 
-    protected int ourColor              = -1;
-    protected int ourSafeZone           = -1;
+    /* First Glyph Challenge */
+    private byte firstGlyphStatus = 0;
+    private boolean didFirstGlyph    = false;
+
 
 
 
     @Override
     public void runOpMode() {
-
 
         /* ************************************
         PROPULSION MOTORS
@@ -139,7 +139,7 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
+        leftDrive = hardwareMap.get(DcMotor.class, "left_drive");
         rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
 
 
@@ -153,24 +153,58 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
         rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
+        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        /***********************************************
-         * COLOR SENSORS
+
+        /***************************************************************
+         * VIEW MARK (this is used to decrypt pictogram and decide which columns we are going to put our glyph in)
          */
-        sensorColor = hardwareMap.get(ColorSensor.class, "color_distance_sensor");
-        sensorDistance = hardwareMap.get(DistanceSensor.class, "color_distance_sensor");
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
+        parameters.vuforiaLicenseKey = "AXINfYT/////AAAAGfcLttUpcU8GheQqMMZAtnFDz/qRJOlHnxEna51521+PFcmEWc02gUQ1s4DchmXk+fFvt+afRNF+2UoUgoAyQNtfVjRNS0u4f5o4kka/jERVEtKlJ27pO4euCEjE1DQ+l8ecADKTd1aWu641OheSf/RqDJ7BSvDct/PYRfRLfShAfBUxaFT3+Ud+6EL31VTmZKiylukvCnHaaQZxDmB2cCDdYFeK2CDwNIWoMx2VvweehNARttNvSR3cp4AepbtWnadsEnDQaStDv8jN09iE7CRWmMY8rrP8ba/O/eVlz0vzU7Fhtf2jXpSvCJn0qDw+1UK/bHsD/vslhdp+CBNcW7bT3gNHgTOrnIcldX2YhgZS";
 
-
-
-        /* ************************************
-         * GLYPH GRIPPER
+        /*
+         * We also indicate which camera on the RC that we wish to use.
+         * Here we chose the back (HiRes) camera (for greater range), but
+         * for a competition robot, the front camera might be more convenient.
          */
-        rightGripper = hardwareMap.get(Servo.class, "right_gripper");
-        leftGripper  = hardwareMap.get(Servo.class, "left_gripper");
+        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
+        this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
+        didFirstGlyph = false;
 
-        rightGripper.setPosition(IDLE_GRIPPER);
-        leftGripper.setPosition(1.0 - IDLE_GRIPPER);
+        /**
+         * Load the data set containing the VuMarks for Relic Recovery. There's only one trackable
+         * in this data set: all three of the VuMarks in the game were created from this one template,
+         * but differ in their instance id information.
+         * @see VuMarkInstanceId
+         */
+        this.relicTrackables = this.vuforia.loadTrackablesFromAsset("RelicVuMark");
+        this.relicTemplate = relicTrackables.get(0);
+        this.relicTemplate.setName("relicVuMarkTemplate"); // can help in debugging; otherwise not necessary
 
+
+        /*********************       GYRO        *********************** */
+        // Set up the parameters with which we will use our IMU. Note that integration
+        // algorithm here just reports accelerations to the logcat log; it doesn't actually
+        // provide positional information.
+        BNO055IMU.Parameters gyroParameters = new BNO055IMU.Parameters();
+        gyroParameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+        gyroParameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        gyroParameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        gyroParameters.loggingEnabled      = true;
+        gyroParameters.loggingTag          = "IMU";
+        gyroParameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+
+
+        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
+        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
+        // and named "imu".
+        gyro = hardwareMap.get(BNO055IMU.class, "imu");
+        gyro.initialize(gyroParameters);
+
+
+        /* ***************** WAITING FOR START BUTTON ******************/
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -179,294 +213,469 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
         waitForStart();
         runtime.reset();
 
+        this.relicTrackables.activate();
 
-
-        /***********************************************
-         * VIEW MARK (this is used to decrypt pictogram and decide which columns we are going to put our glyph in)
-         */
-        /*
-         * To start up Vuforia, tell it the view that we wish to use for camera monitor (on the RC phone);
-         * If no camera monitor is desired, use the parameterless constructor instead (commented out below).
-         */
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
-        // Use our registered license key
-        parameters.vuforiaLicenseKey = "AXINfYT/////AAAAGfcLttUpcU8GheQqMMZAtnFDz/qRJOlHnxEna51521+PFcmEWc02gUQ1s4DchmXk+fFvt+afRNF+2UoUgoAyQNtfVjRNS0u4f5o4kka/jERVEtKlJ27pO4euCEjE1DQ+l8ecADKTd1aWu641OheSf/RqDJ7BSvDct/PYRfRLfShAfBUxaFT3+Ud+6EL31VTmZKiylukvCnHaaQZxDmB2cCDdYFeK2CDwNIWoMx2VvweehNARttNvSR3cp4AepbtWnadsEnDQaStDv8jN09iE7CRWmMY8rrP8ba/O/eVlz0vzU7Fhtf2jXpSvCJn0qDw+1UK/bHsD/vslhdp+CBNcW7bT3gNHgTOrnIcldX2YhgZS";
-        // We are using the BACK camera
-        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
-        this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
+            int i = 0;
 
-            telemetry.addData("Status", "Still Running...");
+            telemetry.addData("Status", "Running");
+/*
+            if (runtime.seconds() > 10) {
+                telemetry.addData("Status", "SafeZone");
+                goToSafeZone();
+            }
+*/
+            telemetry.addData("Status", "loop iteration : %d", i++);
 
-            telemetry.addData("Status", "Jewel Knock");
-            knockJewel();
+            Orientation angles   = gyro.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+            double actualAngle = AngleUnit.DEGREES.normalize(AngleUnit.DEGREES.fromUnit(angles.angleUnit, angles.firstAngle));
 
-            telemetry.addData("Status", "VuMark Decryption");
-            placeGlyphInDecrypedLocation();
+            telemetry.addData("Status", "Angle : %f.2", actualAngle);
 
-            telemetry.addData("Status", "SafeZone");
-            goToSafeZone();
+            if ( !didFirstGlyph ) {
 
-            break;
+                vuMark = RelicRecoveryVuMark.from(relicTemplate);
+                if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
+                    telemetry.addData("VuMark", "%s visible", vuMark);
+                    didFirstGlyph = true;
+                    positionFirstGlyph();
+                }
+                else {
+                    telemetry.addData("VuMark", "not visible");
+                }
+            }
+            telemetry.update();
         }
     }
 
 
-    private void goToSafeZone() {
+    private void moveStraight( double distance) {
 
-        byte    status               = 0;
+        int moveCounts = (int) (distance * PROPULSION_COUNTS_PER_INCH);
+
+        int newLeftTarget = leftDrive.getCurrentPosition() + moveCounts;
+        int newRightTarget = rightDrive.getCurrentPosition() + moveCounts;
+
+        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        leftDrive.setTargetPosition(newLeftTarget);
+        rightDrive.setTargetPosition(newRightTarget);
+
+        leftDrive.setPower(Math.abs(DRIVE_SPEED));
+        rightDrive.setPower(Math.abs(DRIVE_SPEED));
+
+        while ( leftDrive.isBusy() && rightDrive.isBusy()) {
+            telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+            idle();
+            telemetry.update();
+        }
+
+        leftDrive.setPower(0);
+        rightDrive.setPower(0);
+//        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        // Turn off RUN_TO_POSITION
+        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        telemetry.update();
+        return;
+    }
+
+    class EncoderDistance {
+        double left;
+        double right;
+    }
+
+    private EncoderDistance angle2distance(double degres) {
+        EncoderDistance d = new EncoderDistance();
+
+        double radians = Math.toRadians(degres);
+
+        if (radians == 0 ) {
+            d.left = d.right = 0.0;
+            return d;
+        }
+
+        double distance = Math.sin(radians) * 6.0;
+
+        d.left = distance;
+        d.right = -distance;
+
+        return d;
+    }
+
+    private void turnWithoutGyro( double angle) {
+
+        EncoderDistance d;
+
+        d = angle2distance(angle);
+
+        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        leftDrive.setTargetPosition((int) (d.left * PROPULSION_COUNTS_PER_INCH));
+        rightDrive.setTargetPosition((int) (d.right * PROPULSION_COUNTS_PER_INCH));
+
+
+        leftDrive.setPower(Math.abs(TURNING_SPEED));
+        rightDrive.setPower(Math.abs(TURNING_SPEED));
+
+        while ( leftDrive.isBusy() && rightDrive.isBusy()) {
+            telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+            idle();
+            telemetry.update();
+        }
+
+        leftDrive.setPower(0);
+        rightDrive.setPower(0);
+        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        telemetry.update();
+        return;
+    }
+
+    private void turn( double angle) {
+
+        // keep looping while we are still active, and not on heading.
+        while (opModeIsActive() && !onHeading(TURNING_SPEED, angle, P_TURN_COEFF)) {
+            // Update telemetry & Allow time for other processes to run.
+            telemetry.update();
+        }
+
+        ElapsedTime holdTimer = new ElapsedTime();
+        holdTimer.reset();
+
+        while (opModeIsActive() && (holdTimer.time() < 0.5)) {
+            // Update telemetry & Allow time for other processes to run.
+            onHeading(TURNING_SPEED, angle, P_TURN_COEFF);
+            telemetry.update();
+        }
+
+        leftDrive.setPower(0);
+        rightDrive.setPower(0);
+        return;
+    }
+
+
+
+
+
+
+
+    private void positionFirstGlyph() {
+
 
         /*
-         * WE are done with this task when status = 4
+        Grab Block
+        */
+
+        if ( this.ourPosition == BLUE_RIGHT ) {
+
+            double adjust = -4.0;
+            double lastLeg = 9.0;
+
+            switch (this.vuMark) {
+
+                case LEFT:
+                    this.moveStraight(24.0);
+                    this.turn(-90);
+                    this.moveStraight(adjust + 0.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(0);
+                    this.moveStraight(lastLeg);
+                    break;
+
+                case CENTER:
+                    this.moveStraight(24.0);
+                    this.turn(-90);
+                    this.moveStraight(adjust + 1.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(0);
+                    this.moveStraight(lastLeg);
+                    break;
+
+                case RIGHT:
+                    this.moveStraight(24.0);
+                    this.turn(-90);
+                    this.moveStraight(adjust + 2.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(0);
+                    this.moveStraight(lastLeg);
+                    break;
+            }
+        }
+
+        else if ( this.ourPosition == RED_LEFT ) {
+
+            double adjust = 6;
+            double lastLeg = 9.0;
+
+            switch (this.vuMark) {
+
+                case RIGHT:
+
+                    this.moveStraight(24.0);
+                    this.turn(90);
+                    this.moveStraight(adjust + 0.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(0);
+                    this.moveStraight(lastLeg);
+                    break;
+
+                case CENTER:
+
+                    this.moveStraight(24.0);
+                    this.turn(90);
+                    this.moveStraight(adjust + 1.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(0);
+                    this.moveStraight(lastLeg);
+                    break;
+
+                case LEFT:
+
+                    this.moveStraight(24.0);
+                    this.turn(90);
+                    this.moveStraight(adjust + 2.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(0);
+                    this.moveStraight(lastLeg);
+                    break;
+
+            }
+        }
+
+        else if ( this.ourPosition == RED_RIGHT ) {
+
+            double lastLeg = 4.0;
+            double adjust = 4.0;
+
+            switch (this.vuMark) {
+
+                case RIGHT:
+
+                    this.moveStraight(adjust + 24.0 + 0.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(-90);
+                    this.moveStraight(lastLeg);
+                    break;
+
+                case CENTER:
+
+                    this.moveStraight(adjust + 24.0 + 1.5  * SPACE_BETWEEN_COLUMNS);
+                    this.turn(-90);
+                    this.moveStraight(lastLeg);
+                    break;
+
+
+                case LEFT:
+
+                    this.moveStraight(adjust + 24.0 + 2.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(-90);
+                    this.moveStraight(lastLeg);
+                    break;
+            }
+        }
+
+        else if ( this.ourPosition == BLUE_LEFT ) {
+
+            double lastLeg = 10.0;
+            double adjust = 4.0;
+
+            switch (this.vuMark) {
+
+                case LEFT:
+
+                    this.moveStraight(adjust + 24.0 + 0.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(90);
+                    this.moveStraight(lastLeg);
+                    break;
+
+                case CENTER:
+
+                    this.moveStraight(adjust + 24.0 + 1.5  * SPACE_BETWEEN_COLUMNS);
+                    this.turn(90);
+                    this.moveStraight(lastLeg);
+                    break;
+
+
+                case RIGHT:
+
+                    this.moveStraight(adjust + 24.0 + 2.5 * SPACE_BETWEEN_COLUMNS);
+                    this.turn(90);
+                    this.moveStraight(lastLeg);
+                    break;
+            }
+        }
+    }
+
+
+
+    private void goToSafeZone() {
+        /*
+         * WE are done with this task
          */
-        while ( status <= 3 ) {
+        if ( safeZoneStatus > 3 ) {
+            return;
+        }
 
-            switch (status) {
+        switch ( safeZoneStatus ) {
 
+            /*
+             * We are turning
+             */
+            case 0:
+                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+                if ( this.ourPosition == RED_LEFT  || this.ourPosition == BLUE_LEFT ) {
+
+                    leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                    rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                } else {
+
+                    leftDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                    rightDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
+                }
+
+                // Send calculated power to wheels
+                leftDrive.setPower(Math.abs(TURNING_SPEED));
+                rightDrive.setPower(Math.abs(TURNING_SPEED));
+
+                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+
+                safeZoneStatus = 1;
+                return;
+
+            /*
+             * Verify if we are done turning
+             */
+            case 1:
+                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
+                    return;
+                }
                 /*
-                 * We are turning
+                 * Assume we are done turning and stop all motion and reset the encoder
                  */
-                case 0:
-                    leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
+                rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                safeZoneStatus = 2;
+                return;
 
-                    if ( ourSafeZone == LEFT ) {
+            /*
+             * Start Movement Forward
+             */
+            case 2:
+                leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-                        leftDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                        rightDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                    } else {
+                leftDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
+                rightDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
 
-                        leftDrive.setTargetPosition((int) (TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                        rightDrive.setTargetPosition((int) (-TURN_DISTANCE * PROPULSION_COUNTS_PER_INCH));
-                    }
+                // Send calculated power to wheels
+                leftDrive.setPower(Math.abs(DRIVE_SPEED));
+                rightDrive.setPower(Math.abs(DRIVE_SPEED));
 
-                    // Send calculated power to wheels
-                    leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-                    rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
+                telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
+                safeZoneStatus = 3;
+                return;
 
-                    telemetry.addData("Autonomous Propulsion:", " Started %7d", leftDrive.getTargetPosition());
-
-                    status = 1;
-                    break;
-
+            /*
+             * Verify if we are done moving
+             */
+            case 3:
+                if ( leftDrive.isBusy() && rightDrive.isBusy()) {
+                    return;
+                }
                 /*
-                 * Verify if we are done turning
+                 * Assume we are done moving and stop all motion
                  */
-                case 1:
-                    if (leftDrive.isBusy() && rightDrive.isBusy()) {
-                        break;
-                    }
-                    /*
-                     * Assume we are done turning and stop all motion and reset the encoder
-                     */
-                    leftDrive.setPower(0);
-                    rightDrive.setPower(0);
-                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    status = 2;
-                    break;
-
-                /*
-                 * Start Movement Forward
-                 */
-                case 2:
-                    leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    rightDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-                    leftDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
-                    rightDrive.setTargetPosition((int) (DISTANCE_TO_SAFEZONE * PROPULSION_COUNTS_PER_INCH));
-
-                    // Send calculated power to wheels
-                    leftDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-                    rightDrive.setPower(Math.abs(AUTONOMOUS_SPEED));
-
-                    telemetry.addData("Autonomous Propulsion:", " Started %7d", leftDrive.getTargetPosition());
-                    status = 3;
-                    break;
-
-                /*
-                 * Verify if we are done moving
-                 */
-                case 3:
-                    if (leftDrive.isBusy() && rightDrive.isBusy()) {
-                        break;
-                    }
-                    /*
-                     * Assume we are done moving and stop all motion
-                     */
-                    leftDrive.setPower(0);
-                    rightDrive.setPower(0);
-                    leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    status = 4;
-                    break;
-            }
-            telemetry.update();
-
-        } /* while */
-
+                leftDrive.setPower(0);
+                rightDrive.setPower(0);
+                leftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                goToSafeZoneCompletionTime = runtime.seconds();
+                safeZoneStatus = 4;
+                break;
+        }
         return;
     }
 
 
-    private void placeGlyphInDecrypedLocation() {
 
-        byte    status             = 0;
+    /**
+     * Perform one cycle of closed loop heading control.
+     *
+     * @param speed     Desired speed of turn.
+     * @param angle     Absolute Angle (in Degrees) relative to last gyro reset.
+     *                  0 = fwd. +ve is CCW from fwd. -ve is CW from forward.
+     *                  If a relative angle is required, add/subtract from current heading.
+     * @param PCoeff    Proportional Gain coefficient
+     * @return
+     */
+    boolean onHeading(double speed, double angle, double PCoeff) {
+        double   error ;
+        double   steer ;
+        boolean  onTarget = false ;
+        double leftSpeed;
+        double rightSpeed;
 
-        while ( status <= 2 ) {
+        // determine turn power based on +/- error
+        error = getError(angle);
 
-            switch ( status ) {
+        if (Math.abs(error) <= HEADING_THRESHOLD) {
+            steer = 0.0;
+            leftSpeed  = 0.0;
+            rightSpeed = 0.0;
+            onTarget = true;
+        }
+        else {
+            steer = getSteer(error, PCoeff);
+            rightSpeed  = speed * steer;
+            leftSpeed   = -rightSpeed;
+        }
 
-                /*
-                 * Decrypt pictogram
-                 */
-                case 0:
-                    status = 1;
-                    break;
+        // Send desired speeds to motors.
+        leftDrive.setPower(leftSpeed);
+        rightDrive.setPower(rightSpeed);
 
-                /*
-                 * Pickup Glyph
-                 */
-                case 1:
-                    // Close gripper
-                    rightGripper.setPosition(GRIPPER_CLOSED);
-                    leftGripper.setPosition(1 - GRIPPER_CLOSED);
-                    sleep(500);
-                    //lift arm
-                    lifting_arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    lifting_arm.setTargetPosition((int)(FIRST_GLYPH_HEIGHT * ARM_COUNTS_PER_INCH));
-                    lifting_arm.setPower(Math.abs(OPTIMAL_ARM_SPEED));
-                    status = 2;
-                    break;
+        // Display it for the driver.
+        telemetry.addData("Target", "%5.2f", angle);
+        telemetry.addData("Err/St", "%5.2f/%5.2f", error, steer);
+        telemetry.addData("Speed.", "%5.2f:%5.2f", leftSpeed, rightSpeed);
 
-                /*
-                 * Waiting for arm to rise
-                 */
-                case 2:
-                    if (lifting_arm.isBusy() ) {
-                        break;
-                    }
-                    lifting_arm.setPower(0);
-                    lifting_arm.setPower(0);
-                    lifting_arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    status = 3;
-                    break;
-
-                /*
-                 * Travelling
-                 */
-                case 3:
-                    break;
-                /*
-                 * Travel Second Path
-                 */
-                case 4:
-                    break;
-                /*
-                 * Travel Third Path
-                 */
-                case 5:
-                    break;
-
-                /*
-                 * Release the glyph
-                 */
-                case 6:
-                    rightGripper.setPosition(GRIPPER_OPEN);
-                    leftGripper.setPosition(1 - GRIPPER_OPEN);
-                    status = 7;
-                    break;
-
-            }
-
-            telemetry.update();
-
-        } /* while */
-
-        return;
-
+        return onTarget;
     }
 
-    private void knockJewel() {
+    /**
+     * getError determines the error between the target angle and the robot's current heading
+     * @param   targetAngle  Desired angle (relative to global reference established at last Gyro Reset).
+     * @return  error angle: Degrees in the range +/- 180. Centered on the robot's frame of reference
+     *          +ve error means the robot should turn LEFT (CCW) to reduce error.
+     */
+    public double getError(double targetAngle) {
 
-        byte    knockJewelStatus             = 0;
-        double  knockPosition                = 0.0;
+        double robotError;
+        double actualAngle;
 
+        Orientation angles   = gyro.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        actualAngle = AngleUnit.DEGREES.normalize(AngleUnit.DEGREES.fromUnit(angles.angleUnit, angles.firstAngle));
 
-
-        while ( knockJewelStatus <= 2 ) {
-
-            switch ( knockJewelStatus ) {
-
-                /*
-                 * Lower the arm
-                 */
-                case 0:
-                    jewelArm.setPosition(JEWEL_ARM_DOWN);
-                    //sleep(1000);
-                    knockJewelStatus = 1;
-                    break;
-
-                /*
-                 * Detect color (wait until we have a difference of at least 10 between red and blue)
-                 */
-                case 1:
-                    int r = sensorColor.red();
-                    int b = sensorColor.blue();
-
-                    // If our color is red and we detect red
-                    if ( ( ourColor == RED ) && ( r > b ) &&  (r - b > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_FORWARD;
-                        knockJewelStatus = 2;
-                    }
-
-                    // If our color is blue and we detect blue
-                    else if ( ( ourColor == BLUE ) && ( b > r ) &&  (b - r > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_FORWARD;
-                        knockJewelStatus = 2;
-                    }
-
-                    // If our color is red and we detect blue
-                    if ( ( ourColor == RED ) && ( b > r ) &&  (b - r > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_REVERSE;
-                        knockJewelStatus = 2;
-                    }
-
-                    // If our color is blue and we detect red
-                    else if ( ( ourColor == BLUE ) && ( r > b ) &&  (r - b > 10) ) {
-                        knockPosition = JEWEL_KNOCKER_REVERSE;
-                        knockJewelStatus = 2;
-                    }
-
-                    /* Otherwise we give it more time */
-                    telemetry.addData("Red  ", sensorColor.red());
-                    telemetry.addData("Green", sensorColor.green());
-                    telemetry.addData("Blue ", sensorColor.blue());
-                    break;
-
-                /*
-                 * Knock the Jewel and lift arm
-                 */
-                case 2:
-                    // Activate the jewel Knocker and retract arm
-                    jewelKnocker.setPosition(knockPosition);
-                    sleep(2000);
-                    jewelArm.setPosition(JEWEL_ARM_UP);
-                    jewelKnocker.setPosition(JEWEL_KNOCKER_CENTER);
-                    knockJewelStatus = 3;
-                    break;
-
-            }
-
-            telemetry.update();
-
-        } /* while */
-
-        return;
-
+        // calculate error in -179 to +180 range  (
+        robotError = targetAngle - actualAngle;
+        while (robotError > 180)  robotError -= 360;
+        while (robotError <= -180) robotError += 360;
+        return robotError;
     }
 
+    /**
+     * returns desired steering force.  +/- 1 range.  +ve = steer left
+     * @param error   Error angle in robot relative degrees
+     * @param PCoeff  Proportional Gain Coefficient
+     * @return
+     */
+    public double getSteer(double error, double PCoeff) {
+        return Range.clip(error * PCoeff, -1, 1);
+    }
 
 }
