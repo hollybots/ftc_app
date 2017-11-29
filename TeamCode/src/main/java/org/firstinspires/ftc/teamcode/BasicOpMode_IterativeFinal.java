@@ -80,7 +80,7 @@ public class BasicOpMode_IterativeFinal extends OpMode
 
     static final double GRIPPER_OPEN     =  0.7;     // Maximum rotational position
     static final double GRIPPER_CLOSED     =  0.5;     // Minimum rotational position
-    static final double IDLE_GRIPPER        =  GRIPPER_OPEN;
+    static final double IDLE_GRIPPER        =  0.75;
 
 
     static final double     REV_COUNTS_PER_MOTOR_REV            = 1200;                // eg: REV Motor Encoder
@@ -152,9 +152,9 @@ public class BasicOpMode_IterativeFinal extends OpMode
          */
         lifting_arm = hardwareMap.get(DcMotor.class, "lifting_arm");
         lifting_arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        lifting_arm.setDirection(DcMotor.Direction.REVERSE);
+        lifting_arm.setDirection(DcMotor.Direction.FORWARD);
         lifting_arm.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        lifting_arm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        lifting_arm.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // get a reference to our sensors
         limitLow = hardwareMap.get(DigitalChannel.class, "arm_limit_down");
@@ -178,10 +178,10 @@ public class BasicOpMode_IterativeFinal extends OpMode
         /* ***********************************
          COLOR/DISTANCE SENSOR
           */
-        sensorColor = hardwareMap.get(ColorSensor.class, "color_distance_sensor");
-        sensorDistance = hardwareMap.get(DistanceSensor.class, "color_distance_sensor");
-
-
+//        sensorColor = hardwareMap.get(ColorSensor.class, "color_distance_sensor");
+//        sensorDistance = hardwareMap.get(DistanceSensor.class, "color_distance_sensor");
+//
+//
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
     }
@@ -207,6 +207,9 @@ public class BasicOpMode_IterativeFinal extends OpMode
     public void start() {
 
         runtime.reset();
+        rightGripper.setPosition(GRIPPER_OPEN);
+        leftGripper.setPosition(1 - GRIPPER_OPEN);
+        gripperClosed = false;
     }
 
 
@@ -220,7 +223,7 @@ public class BasicOpMode_IterativeFinal extends OpMode
         telemetry.addData("Autonomous Mode", "Off");
 
         /* *********** EMERGENCY SITUATIONS *********************/
-        if ( lifting_arm.getPower() < 0 ) {
+        if ( lifting_arm.getPower() > 0 ) {
             if ( limitLow.getState() == true ) {
                 telemetry.addData("Lift Status", "Going down");
             } else {
@@ -230,7 +233,7 @@ public class BasicOpMode_IterativeFinal extends OpMode
                 telemetry.addData("Lift Status", "Lower Limit Reached");
             }
         }
-        else if ( lifting_arm.getPower() > 0 ) {
+        else if ( lifting_arm.getPower() < 0 ) {
             if ( limitHigh.getState() == true ) {
                 telemetry.addData("Lift Status", "Going Up");
             } else {
@@ -290,13 +293,13 @@ public class BasicOpMode_IterativeFinal extends OpMode
         }
 
         /* **************** OR SENSE THAT THE BLOCK IS CLOSE BY AND GRAB IT *****/
-        telemetry.addData("Distance (cm)", String.format(Locale.US, "%.02f", sensorDistance.getDistance(DistanceUnit.CM)));
-
-        if ( sensorDistance.getDistance(DistanceUnit.CM) < 11.0 && !gripperClosed ) {
-            rightGripper.setPosition(GRIPPER_CLOSED);
-            leftGripper.setPosition(1 - GRIPPER_CLOSED);
-            gripperClosed = true;
-        }
+//        telemetry.addData("Distance (cm)", String.format(Locale.US, "%.02f", sensorDistance.getDistance(DistanceUnit.CM)));
+//
+//        if ( sensorDistance.getDistance(DistanceUnit.CM) < 11.0 && !gripperClosed ) {
+//            rightGripper.setPosition(GRIPPER_CLOSED);
+//            leftGripper.setPosition(1 - GRIPPER_CLOSED);
+//            gripperClosed = true;
+//        }
 
         /* **************** ARM MOVEMENT*****************************************/
         if ( armStatus != STATUS_LIFTING ) {
@@ -312,42 +315,42 @@ public class BasicOpMode_IterativeFinal extends OpMode
 
             else {
                 /* ********* LEFT JOY STICK -> MANUAL MODE ********/
-                double lift_speed = -gamepad2.right_stick_y;
+                double lift_speed = gamepad2.right_stick_y;
 
                 // Only if the movement is allowed
-                if (!( (lift_speed > 0 && !limitHigh.getState()) || (lift_speed < 0 && !limitLow.getState()) ) ) {
-                    telemetry.addData("Lift Status", "Going Up");
+                if (!( (lift_speed < 0 && !limitHigh.getState()) || (lift_speed > 0 && !limitLow.getState()) ) ) {
+                    telemetry.addData("Lift Status", "Moving");
                     lifting_arm.setPower(lift_speed);
                 }
             }
 
 
             /* ********* AUTO LIFT BUTTONS ********/
-            if ( gamepad2.a ) {
-                newTargetHeight = FIRST_FLOOR;
-                armStatus = STATUS_ENGAGING;
-            }
-            else if ( gamepad2.b ) {
-                newTargetHeight = SECOND_FLOOR;
-                armStatus = STATUS_ENGAGING;
-            }
-            else if ( gamepad2.x ) {
-                newTargetHeight = THIRD_FLOOR;
-                armStatus = STATUS_ENGAGING;
-            }
-            else if ( gamepad2.y ) {
-                newTargetHeight = FOURTH_FLOOR;
-                armStatus = STATUS_ENGAGING;
-            }
-            // If one of the auto buttons was pressed, start moving the motor
-            if ( armStatus == STATUS_ENGAGING ) {
-
-                lifting_arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                lifting_arm.setTargetPosition((int)(newTargetHeight * ARM_COUNTS_PER_INCH));
-                lifting_arm.setPower(Math.abs(OPTIMAL_ARM_SPEED));
-
-                armStatus = STATUS_LIFTING;
-            }
+//            if ( gamepad2.a ) {
+//                newTargetHeight = FIRST_FLOOR;
+//                armStatus = STATUS_ENGAGING;
+//            }
+//            else if ( gamepad2.b ) {
+//                newTargetHeight = SECOND_FLOOR;
+//                armStatus = STATUS_ENGAGING;
+//            }
+//            else if ( gamepad2.x ) {
+//                newTargetHeight = THIRD_FLOOR;
+//                armStatus = STATUS_ENGAGING;
+//            }
+//            else if ( gamepad2.y ) {
+//                newTargetHeight = FOURTH_FLOOR;
+//                armStatus = STATUS_ENGAGING;
+//            }
+//            // If one of the auto buttons was pressed, start moving the motor
+//            if ( armStatus == STATUS_ENGAGING ) {
+//
+//                lifting_arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//                lifting_arm.setTargetPosition((int)(newTargetHeight * ARM_COUNTS_PER_INCH));
+//                lifting_arm.setPower(Math.abs(OPTIMAL_ARM_SPEED));
+//
+//                armStatus = STATUS_LIFTING;
+//            }
         }
 
         if ( armStatus == STATUS_LIFTING ) {

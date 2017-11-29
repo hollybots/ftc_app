@@ -52,25 +52,30 @@ import com.qualcomm.robotcore.hardware.Servo;
 //@Disabled
 public class TestGripper extends LinearOpMode {
 
-    static final double INCREMENT   = 0.01;     // amount to slew servo each CYCLE_MS cycle
-    static final int    CYCLE_MS    =   50;     // period of each cycle
-    static final double MAX_POS     =  0.7;     // Maximum rotational position
-    static final double MIN_POS     =  0.5;     // Minimum rotational position
+
+    static final double GRIPPER_OPEN     =  0.7;     // Maximum rotational position
+    static final double GRIPPER_CLOSED     =  0.5;     // Minimum rotational position
+    static final double IDLE_GRIPPER        =  GRIPPER_OPEN;
 
     // Define class members
     Servo   rightGripper;
     Servo   leftGripper;
-    double  position = (MAX_POS + MIN_POS) / 2; // Start at halfway position
-    boolean rampUp = true;
+    private boolean gripperClosed                   = false;
 
 
     @Override
     public void runOpMode() {
 
-        // Connect to servo (Assume PushBot Left Hand)
-        // Change the text in quotes to match any servo name on your robot.
+
+        /* ************************************
+        GLYPH GRIPPER
+        */
         rightGripper = hardwareMap.get(Servo.class, "right_gripper");
-        leftGripper = hardwareMap.get(Servo.class, "left_gripper");
+        leftGripper  = hardwareMap.get(Servo.class, "left_gripper");
+
+        rightGripper.setPosition(IDLE_GRIPPER);
+        leftGripper.setPosition(1.0 - IDLE_GRIPPER);
+
 
         // Wait for the start button
         telemetry.addData(">", "Press Start to scan Servo." );
@@ -81,34 +86,17 @@ public class TestGripper extends LinearOpMode {
         // Scan servo till stop pressed.
         while(opModeIsActive()){
 
-            // slew the servo, according to the rampUp (direction) variable.
-            if (rampUp) {
-                // Keep stepping up until we hit the max value.
-                position += INCREMENT ;
-                if (position >= MAX_POS ) {
-                    position = MAX_POS;
-                    rampUp = !rampUp;   // Switch ramp direction
-                }
+        /* ****************** OPEN AND CLOSE GRIPPER  ***********/
+            if (gamepad2.right_bumper && gripperClosed ) {
+                rightGripper.setPosition(GRIPPER_OPEN);
+                leftGripper.setPosition(1 - GRIPPER_OPEN);
+                gripperClosed = false;
             }
-            else {
-                // Keep stepping down until we hit the min value.
-                position -= INCREMENT ;
-                if (position <= MIN_POS ) {
-                    position = MIN_POS;
-                    rampUp = !rampUp;  // Switch ramp direction
-                }
+            else if (gamepad2.left_bumper && !gripperClosed ) {
+                rightGripper.setPosition(GRIPPER_CLOSED);
+                leftGripper.setPosition(1 - GRIPPER_CLOSED);
+                gripperClosed = true;
             }
-
-            // Display the current value
-            telemetry.addData("Servo Position", "%5.2f", position);
-            telemetry.addData(">", "Press Stop to end test." );
-            telemetry.update();
-
-            // Set the servo to the new position and pause;
-            rightGripper.setPosition(position);
-            leftGripper.setPosition(1.0 - position);
-            sleep(CYCLE_MS);
-            idle();
         }
 
         // Signal done;
