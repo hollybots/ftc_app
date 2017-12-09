@@ -290,6 +290,7 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
             else if ( !didFirstGlyph && !didSafeZone && runtime.seconds() > 20.0 ) {
                 telemetry.addData("Status", "SafeZone");
                 goToSafeZone();
+                didSafeZone = true;
             }
             telemetry.update();
         }
@@ -607,14 +608,14 @@ public class BasicOpMode_Autonomous extends LinearOpMode {
         switch ( ourPosition ) {
             case BLUE_LEFT:
             case RED_LEFT:
-                this.turn(30);
-                this.moveStraight(24.0);
+                this.turn(15);
+                this.moveStraight(32.0);
                 break;
 
             case BLUE_RIGHT:
             case RED_RIGHT:
-                this.turn(-30);
-                this.moveStraight(24.0);
+                this.turn(-15);
+                this.moveStraight(32.0);
                 break;
         }
     }
