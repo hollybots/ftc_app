@@ -115,14 +115,14 @@ public class ConceptCryptoBoxIdentificationTest extends LinearOpMode {
         this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
 
         /**
-         * Load the data set containing the VuMarks for Relic Recovery. There's only one trackable
+         * Load the data set containing the image for . There's only one trackable
          * in this data set: all three of the VuMarks in the game were created from this one template,
          * but differ in their instance id information.
          * @see VuMarkInstanceId
          */
-        VuforiaTrackables relicTrackables = this.vuforia.loadTrackablesFromAsset("relicCryptoBox");
-        VuforiaTrackable relicTemplate = relicTrackables.get(0);
-        relicTemplate.setName("relicCryptoBoxTemplate"); // can help in debugging; otherwise not necessary
+        VuforiaTrackables relicTrackables = this.vuforia.loadTrackablesFromAsset("FIRST");
+        VuforiaTrackable relicTemplate = relicTrackables.get(0); // There is only one anyway...
+        relicTemplate.setName("Finding the Crypto Box Template"); // can help in debugging; otherwise not necessary
 
         telemetry.addData(">", "Press Play to start");
         telemetry.update();
