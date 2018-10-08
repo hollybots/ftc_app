@@ -104,6 +104,8 @@ public class BasicOpMode_FiddlingAround extends LinearOpMode {
     private ColorSensor sensorColor = null;
     private DistanceSensor sensorDistance = null;
 
+
+
     private Servo    leftGripper    = null;
     private Servo    rightGripper   = null;
 

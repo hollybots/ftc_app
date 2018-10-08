@@ -31,9 +31,16 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import java.lang.Math;
+
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
+import java.util.Locale;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -48,9 +55,9 @@ import java.lang.Math;
  * Use Android Studios to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
-@TeleOp(name="Iterative: Propulsion Test Mecanum Wheels", group="Iterative")
+@TeleOp(name="Iterative: OpMode 14877", group="Iterative")
 //@Disabled
-public class BasicOpMode_MecanumWheelsPropulsionTest extends OpMode
+public class BasicOpMode_14877 extends OpMode
 {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -80,6 +87,22 @@ public class BasicOpMode_MecanumWheelsPropulsionTest extends OpMode
     private DcMotor leftMotor;
     double right;
     double left;
+    float rightTrigger;
+    float leftTrigger;
+    Servo servo;
+    boolean  setPosition = true;
+    static final double MAX_POS     =  1.0;     // Maximum rotational position
+    static final double MIN_POS     =  0.0;     // Minimum rotational position
+    double position;
+
+    boolean rightPressed = false;
+    boolean leftPressed = false;
+    private ColorSensor sensorColor = null;
+    private DistanceSensor sensorDistance = null;
+    DigitalChannel digitalTouch;
+
+
+
 
 
     /*
@@ -104,6 +127,8 @@ public class BasicOpMode_MecanumWheelsPropulsionTest extends OpMode
        // rearRightDrive = hardwareMap.get(DcMotor.class, "right_motor");
         rightMotor = hardwareMap.get(DcMotor.class, "right_motor");
         leftMotor = hardwareMap.get(DcMotor.class, "left_motor");
+        // Servo to control the team marker.
+        servo = hardwareMap.get(Servo.class, "arm_marker");
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
@@ -117,7 +142,7 @@ public class BasicOpMode_MecanumWheelsPropulsionTest extends OpMode
         frontRightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         rearLeftDrive.setDirection(DcMotor.Direction.REVERSE);
-        rearLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rearLeftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);adb
         rearLeftDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         rearRightDrive.setDirection(DcMotor.Direction.FORWARD);
@@ -131,6 +156,15 @@ public class BasicOpMode_MecanumWheelsPropulsionTest extends OpMode
         leftMotor.setDirection(DcMotor.Direction.FORWARD);
         leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+
+        sensorColor = hardwareMap.get(ColorSensor.class, "color_range_sensor");
+        sensorDistance = hardwareMap.get(DistanceSensor.class, "color_range_sensor");
+
+        digitalTouch = hardwareMap.get(DigitalChannel.class, "touch_sensor");
+
+        // set the digital channel to input.
+        digitalTouch.setMode(DigitalChannel.Mode.INPUT);
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -156,6 +190,12 @@ public class BasicOpMode_MecanumWheelsPropulsionTest extends OpMode
     public void start() {
         right = 0;
         left = 0;
+        rightPressed = false;
+        leftPressed = false;
+        position = 0;
+        leftMotor.setPower(0.2);
+        rightMotor.setPower(0.2);
+
 
         runtime.reset();
     }
@@ -180,13 +220,55 @@ public class BasicOpMode_MecanumWheelsPropulsionTest extends OpMode
         //Keep game pad right y in code
         right = -gamepad1.left_stick_y;
         left = -gamepad1.right_stick_y;
+        rightTrigger = gamepad1.right_trigger;
+        leftTrigger = gamepad1.left_trigger;
 
 
         // Send calculated power to wheels
         leftMotor.setPower(left);
         rightMotor.setPower(right);
 
+        if (rightTrigger < 0.2 ) {
+            rightPressed = false;
+        }
+        if (leftTrigger < 0.2 ) {
+            leftPressed = false;
+        }
 
+        if (sensorDistance.getDistance(DistanceUnit.CM ) < 20 ){
+            leftMotor.setPower(0);
+            rightMotor.setPower(0);
+
+        }
+        if (rightTrigger > 0.6 && !rightPressed )  {
+            rightPressed = true;
+            servo.setPosition(MAX_POS);
+            telemetry.addData("Status", "Right pressed");
+            // Send telemetry message to indicate successful Encoder reset
+
+        }
+        else if (leftTrigger > 0.6 & !leftPressed) {
+            leftPressed = true;
+            servo.setPosition(MIN_POS);
+            telemetry.addData("Status", "Left pressed");
+            // Send telemetry message to indicate successful Encoder reset
+
+        }
+        telemetry.addData("Status", " Value of rightTrigger) "+ rightTrigger + " Value of leftTrigger) "+ leftTrigger);
+        // Send telemetry message to indicate successful Encoder reset
+
+        /* Otherwise we give it more time */
+        telemetry.addData("Red  ", sensorColor.red());
+        telemetry.addData("Green", sensorColor.green());
+        telemetry.addData("Blue ", sensorColor.blue());
+        telemetry.addData("Distance (cm)",
+                String.format(Locale.US, "%.02f", sensorDistance.getDistance(DistanceUnit.CM)));
+
+        if (digitalTouch.getState() == true) {
+            telemetry.addData("Digital Touch", "Is Not Pressed");
+        } else {
+            telemetry.addData("Digital Touch", "Is Pressed");
+        }
 //        frontRightDrive.setPower(front_right);
 //        rearLeftDrive.setPower(rear_left);
 //        rearRightDrive.setPower(rear_right);
