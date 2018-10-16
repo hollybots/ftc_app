@@ -97,7 +97,7 @@ public class Navigation_14877 {
      * @param cameraLeftDisplacement
      * @param cameraVerticalDisplacement
      */
-    public void init(HardwareMap hardwareMap,
+    public Navigation_14877(HardwareMap hardwareMap,
                      Telemetry telemetry,
                      String vuForiaKey,
                      VuforiaLocalizer.CameraDirection cameraChoice,
@@ -272,6 +272,7 @@ public class Navigation_14877 {
 
             // express position (translation) of robot in inches.
             VectorF translation = lastLocation.getTranslation();
+
             telemetry.addData("Pos (in)", "{X, Y, Z} = %.1f, %.1f, %.1f",
                     translation.get(0) / mmPerInch, translation.get(1) / mmPerInch, translation.get(2) / mmPerInch);
 

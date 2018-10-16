@@ -29,9 +29,10 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import org.firstinspires.ftc.teamcode.Navigation_14877;
+import android.graphics.Color;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorSensor;
@@ -42,28 +43,17 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
-import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
-import org.firstinspires.ftc.teamcode.FieldPlacement;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Locale;
 
-import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.YZX;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.BACK;
-import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.FRONT;
 
 /**
  * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
@@ -78,9 +68,9 @@ import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocaliz
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Autonomous 14877", group="Linear Opmode")
+@TeleOp(name="Basic: Hardware Test 14877", group="Linear Opmode")
 //@Disabled
-public class Autonomous_14877 extends LinearOpMode {
+public class HardwareTest_14877 extends LinearOpMode {
 
     /* Will be injected */
     protected double MARKER_POSITION_X;
@@ -94,14 +84,21 @@ public class Autonomous_14877 extends LinearOpMode {
     private static final int CAMERA_LEFT_DISPLACEMENT           = 0;     // eg: Camera is ON the robot's center line
 
 
+    /**
+     * Color
+     */
+    private final double SCALE_FACTOR = 255;
+
+
     private static final double REV_COUNTS_PER_MOTOR_REV        = 1142;                 // eg: REV Motor Encoder
 
     private static final double SWIVEL_DOWN                      = 1;
     private static final double SWIVEL_UP                        = -1;
+    private static final double SWIVEL_SPEED                     = 0.2;
 
 
-    private static final int POSITION_MARKER_DOWN               = 1;
-    private static final int POSITION_MARKER_UP                 = 0;
+    private static final double MARKER_DOWN                         = 0.2;
+    private static final double MARKER_UP                           = 0.8;
 
 
     private static final int SLIDE_OUT                          = -1;
@@ -137,7 +134,7 @@ public class Autonomous_14877 extends LinearOpMode {
     private DcMotor slide        = null;
     private DcMotor lift         = null;
 
-    private Servo armMarker   = null;
+    private Servo marker   = null;
 
     private BNO055IMU gyro = null;              // integrated IMU
 
@@ -147,9 +144,9 @@ public class Autonomous_14877 extends LinearOpMode {
     private DigitalChannel armLimitDown = null;
 
 
-    private ColorSensor frontColor = null;
-    private DistanceSensor frontDistance = null;
-    private DistanceSensor backDistance = null;
+    private ColorSensor frontColorSensor = null;
+    private DistanceSensor frontDistanceSensor = null;
+    private ModernRoboticsI2cRangeSensor backDistanceSensor = null;
 
 
     /**
@@ -169,11 +166,16 @@ public class Autonomous_14877 extends LinearOpMode {
     FieldPlacement  currentRobotPlacement = null;
 
 
-
-
-
     @Override
     public void runOpMode() {
+
+        double rightPropulsionCommand = 0.0;
+        double leftPropulsionCommand = 0.0;
+
+        double swivelCommand = 0.0;
+        double slideCommand = 0.0;
+
+        double markerCommand = 0.0;
 
 
         telemetry.addData("Status", "Initialized");
@@ -192,7 +194,7 @@ public class Autonomous_14877 extends LinearOpMode {
         /* ************************************
             TEAM MARKER
         */
-        armMarker = hardwareMap.get(Servo.class, "arm_marker");
+        marker = hardwareMap.get(Servo.class, "arm_marker");
 
         /* ************************************
             MOTORS
@@ -229,10 +231,9 @@ public class Autonomous_14877 extends LinearOpMode {
         /* **************************************
             DISTANCE AND COLOR
          */
-        frontColor = hardwareMap.get(ColorSensor.class, "front_color_distance");
-        frontDistance = hardwareMap.get(DistanceSensor.class, "front_color_distance");
-        backDistance = hardwareMap.get(DistanceSensor.class, "back_distance");
-
+        frontColorSensor = hardwareMap.get(ColorSensor.class, "front_color_distance");
+        frontDistanceSensor = hardwareMap.get(DistanceSensor.class, "front_color_distance");
+        backDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "back_distance");
 
 
         /* ************************************
@@ -269,30 +270,115 @@ public class Autonomous_14877 extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while ( opModeIsActive() ) {
 
+            /** Telemetry Right Bumper */
+            telemetry.addData("Gamepad1 Right Y:", gamepad1.right_stick_x);
+            telemetry.addData("Gamepad1 Right X:", gamepad1.right_stick_y);
+            telemetry.addData("Gamepad1 Left X:", gamepad1.right_stick_x);
+            telemetry.addData("Gamepad1 Left Y:", gamepad1.right_stick_y);
+            telemetry.addData("Gamepad1 Right Bumper:", gamepad1.right_bumper);
+            telemetry.addData("Gamepad1 Left Bumper:", gamepad1.left_bumper);
 
-            if ( armAtHighest() ) {
+
+            /* Check  remote 1 */
+            // Tank Mode uses one stick to control each wheel.
+            // - This requires no math, but it is hard to drive forward slowly and keep straight.
+            rightPropulsionCommand  = -gamepad1.right_stick_y;
+            leftPropulsionCommand   = -gamepad1.left_stick_y;
+
+            /** Bumpers left and right Team marker down and up */
+            if ( gamepad1.right_bumper ) {
+                markerCommand = MARKER_DOWN;
+            }
+            else if (gamepad1.left_bumper ) {
+                markerCommand = MARKER_UP;
+            }
+
+            /* Check  remote 2 */
+            slideCommand = -gamepad2.right_stick_y;
+            swivelCommand = -gamepad2.left_stick_y;
+
+
+            /* Limit the speed on slide motor */
+            if ( slideCommand < 0.0 ) {
+                slideCommand = -SLIDE_SPEED;
+            } else if ( slideCommand > 0.0 ) {
+                slideCommand = SLIDE_SPEED;
+            }
+
+            /* Limit the speed on swivel motor */
+            if ( swivelCommand < 0.0 ) {
+                swivelCommand = -SWIVEL_SPEED;
+            } else if ( swivelCommand > 0.0) {
+                swivelCommand = SWIVEL_SPEED;
+            }
+
+            telemetry.addData("Propulsion left:", rightPropulsionCommand);
+            telemetry.addData("Propulsion right:", leftPropulsionCommand);
+            telemetry.addData("Propulsion slide:", slideCommand);
+            telemetry.addData("Propulsion swivel:", swivelCommand);
+
+            /* Check sensors */
+            float hsvValues[] = {0F, 0F, 0F};
+            Color.RGBToHSV((int) (frontColorSensor.red() * SCALE_FACTOR),
+                    (int) (frontColorSensor.green() * SCALE_FACTOR),
+                    (int) (frontColorSensor.blue() * SCALE_FACTOR),
+                    hsvValues);
+
+            // send the info back to driver station using telemetry function.
+            telemetry.addData("Distance (cm)",
+                    String.format(Locale.US, "%.02f", frontDistanceSensor.getDistance(DistanceUnit.CM)));
+            telemetry.addData("Alpha", frontColorSensor.alpha());
+            telemetry.addData("Red  ", frontColorSensor.red());
+            telemetry.addData("Green", frontColorSensor.green());
+            telemetry.addData("Blue ", frontColorSensor.blue());
+            telemetry.addData("Hue", hsvValues[0]);
+
+
+            telemetry.addData("raw ultrasonic", backDistanceSensor.rawUltrasonic());
+            telemetry.addData("raw optical", backDistanceSensor.rawOptical());
+            telemetry.addData("cm optical", "%.2f cm", backDistanceSensor.cmOptical());
+            telemetry.addData("cm", "%.2f cm", backDistanceSensor.getDistance(DistanceUnit.CM));
+
+
+            /** Check Emergency situations */
+
+            if ( armAtHighest() && swivelingUp(swivelCommand) ) {
 
                 telemetry.addData("Status", "Limit Switch UP");
+                swivelCommand = 0;
             }
 
-            if ( armAtLowest() ) {
+            if ( armAtLowest() && swivelingDown(swivelCommand) ) {
 
                 telemetry.addData("Status", "Limit Switch DOWN");
+                swivelCommand = 0;
             }
 
-            if ( armCompletelyExtended() ) {
+            if ( armCompletelyExtended() && extending(slideCommand)) {
 
                 telemetry.addData("Status", "Limit Switch EXTENDED");
+                slideCommand = 0;
             }
 
-            if ( armCompletelyRetracted() ) {
+            if ( armCompletelyRetracted() && retracting(slideCommand) ) {
 
                 telemetry.addData("Status", "Limit Switch RETRACTED");
+                slideCommand = 0;
             }
 
-            // 1) Land and reorient the robot
-            //landRobot();
+            /* Get Current placement */
             currentRobotPlacement = navigation.getPlacement();
+
+
+            /* Actions */
+            rightDrive.setPower(rightPropulsionCommand);
+            leftDrive.setPower(leftPropulsionCommand);
+
+            lift.setPower(swivelCommand);
+            slide.setPower(slideCommand);
+
+            marker.setPosition(markerCommand);
+
 
             // 2) Drop the marker
             //scoreMarker();
@@ -325,6 +411,15 @@ public class Autonomous_14877 extends LinearOpMode {
     /*******************************
      * ARM SLIDER HELPERS
      */
+    public boolean retracting(double command) {
+
+        return (command > 0);
+    }
+
+    public boolean extending(double command) {
+
+        return (command > 0);
+    }
 
     private void extendArm(double length) {
 
@@ -371,10 +466,10 @@ public class Autonomous_14877 extends LinearOpMode {
                 }
             }
 
-            if ( armFullyExtended() && direction == SLIDE_OUT ) {
+            if ( armCompletelyExtended() && direction == SLIDE_OUT ) {
                 break;
             }
-            if ( armFullyRetracted() && direction == SLIDE_IN ) {
+            if ( armCompletelyRetracted() && direction == SLIDE_IN ) {
                 break;
             }
 
@@ -385,15 +480,14 @@ public class Autonomous_14877 extends LinearOpMode {
     }
 
 
-    private boolean armFullyExtended() {
+    private boolean armCompletelyExtended() {
 
-        return this.armLimitExtended.getState();
+        return !(this.armLimitExtended.getState() == true );
     }
 
 
-    private boolean armFullyRetracted() {
-
-        return this.armLimitRetracted.getState();
+    private boolean armCompletelyRetracted() {
+        return !(this.armLimitRetracted.getState() == true);
     }
 
 
@@ -414,16 +508,16 @@ public class Autonomous_14877 extends LinearOpMode {
         return !(this.armLimitDown.getState() == true);
     }
 
-    private boolean armCompletelyExtended() {
 
-        return !(this.armLimitExtended.getState() == true );
+    private boolean swivelingUp(double command)  {
+
+        return (command > 0 );
     }
 
+    private boolean swivelingDown(double command) {
 
-    private boolean armCompletelyRetracted() {
-        return !(this.armLimitRetracted.getState() == true);
+        return (command < 0);
     }
-
 
 
 
@@ -468,9 +562,9 @@ public class Autonomous_14877 extends LinearOpMode {
      */
     private void dropMarker() {
 
-        armMarker.setPosition(POSITION_MARKER_DOWN);
+        marker.setPosition(MARKER_DOWN);
         justWait(2);
-        armMarker.setPosition(POSITION_MARKER_UP);
+        marker.setPosition(MARKER_UP);
     }
 
 
@@ -478,7 +572,7 @@ public class Autonomous_14877 extends LinearOpMode {
 
 
     /******************************
-     * PROPULTION HELPERS
+     * PROPULSION HELPERS
      */
     private void turn( double angle) {
 
