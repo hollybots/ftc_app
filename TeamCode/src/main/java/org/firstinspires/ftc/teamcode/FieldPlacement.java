@@ -10,7 +10,7 @@ public class FieldPlacement {
 
     protected double orientation;
 
-    FieldPlacement(double x, double y) {
+    public FieldPlacement(double x, double y) {
 
         this.x = x;
         this.y = y;
@@ -19,7 +19,7 @@ public class FieldPlacement {
 
     }
 
-    FieldPlacement(double x, double y, double orientation) {
+    public FieldPlacement(double x, double y, double orientation) {
 
         this.x = x;
         this.y = y;
@@ -30,7 +30,7 @@ public class FieldPlacement {
 
     }
 
-    FieldPlacement(double r, double theta, boolean vectorial) {
+    public FieldPlacement(double r, double theta, boolean vectorial) {
 
         this.theta = theta;
         this.r = r;
@@ -39,7 +39,7 @@ public class FieldPlacement {
 
     }
 
-    FieldPlacement(double r, double theta, boolean vectorial, double orientation) {
+    public FieldPlacement(double r, double theta, boolean vectorial, double orientation) {
 
         this.theta = theta;
         this.r = r;

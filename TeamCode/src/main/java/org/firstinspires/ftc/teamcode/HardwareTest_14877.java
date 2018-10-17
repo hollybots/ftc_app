@@ -204,8 +204,8 @@ public class HardwareTest_14877 extends LinearOpMode {
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
-        leftDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightDrive.setDirection(DcMotor.Direction.REVERSE);
+        leftDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightDrive.setDirection(DcMotor.Direction.FORWARD);
 
 
         lift  = hardwareMap.get(DcMotor.class, "lift");
@@ -273,8 +273,8 @@ public class HardwareTest_14877 extends LinearOpMode {
             /** Telemetry Right Bumper */
             telemetry.addData("Gamepad1 Right Y:", gamepad1.right_stick_x);
             telemetry.addData("Gamepad1 Right X:", gamepad1.right_stick_y);
-            telemetry.addData("Gamepad1 Left X:", gamepad1.right_stick_x);
-            telemetry.addData("Gamepad1 Left Y:", gamepad1.right_stick_y);
+            telemetry.addData("Gamepad1 Left X:", gamepad1.left_stick_y);
+            telemetry.addData("Gamepad1 Left Y:", gamepad1.left_stick_x);
             telemetry.addData("Gamepad1 Right Bumper:", gamepad1.right_bumper);
             telemetry.addData("Gamepad1 Left Bumper:", gamepad1.left_bumper);
 
@@ -334,9 +334,14 @@ public class HardwareTest_14877 extends LinearOpMode {
             telemetry.addData("Hue", hsvValues[0]);
 
 
-            telemetry.addData("raw ultrasonic", backDistanceSensor.rawUltrasonic());
-            telemetry.addData("raw optical", backDistanceSensor.rawOptical());
-            telemetry.addData("cm optical", "%.2f cm", backDistanceSensor.cmOptical());
+//            telemetry.addData("raw ultrasonic", backDistanceSensor.rawUltrasonic());
+//            telemetry.addData("raw optical", backDistanceSensor.rawOptical());
+            if ( backDistanceSensor.cmOptical() > 1000 ) {
+                telemetry.addData("cm optical", "out of Range");
+            }
+            else {
+                telemetry.addData("cm optical", "%.2f cm", backDistanceSensor.cmOptical());
+            }
             telemetry.addData("cm", "%.2f cm", backDistanceSensor.getDistance(DistanceUnit.CM));
 
 
@@ -367,8 +372,11 @@ public class HardwareTest_14877 extends LinearOpMode {
             }
 
             /* Get Current placement */
-            currentRobotPlacement = navigation.getPlacement();
 
+            currentRobotPlacement = navigation.getPlacement();
+            if ( currentRobotPlacement != null ) {
+                telemetry.addData("VuForia", "We have a placement!!");
+            }
 
             /* Actions */
             rightDrive.setPower(rightPropulsionCommand);
