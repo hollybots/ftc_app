@@ -79,10 +79,9 @@ public class HardwareTest_14877 extends LinearOpMode {
     /**
      * VUforia translation from the the robot center where x -> front, y -> left and  z -> up
      */
-    private static final int CAMERA_FORWARD_DISPLACEMENT        = 110;   // eg: Camera is 110 mm in front of robot center
-    private static final int CAMERA_VERTICAL_DISPLACEMENT       = 200;   // eg: Camera is 200 mm above ground
-    private static final int CAMERA_LEFT_DISPLACEMENT           = 0;     // eg: Camera is ON the robot's center line
-
+    private static final int CAMERA_FORWARD_DISPLACEMENT        = 150;   // eg: Camera is 150 mm in front of robot center
+    private static final int CAMERA_VERTICAL_DISPLACEMENT       = 110;   // eg: Camera is 110 mm above ground
+    private static final int CAMERA_LEFT_DISPLACEMENT           = 40;     // eg: Camera is 40 mm to the left of center line
 
     /**
      * Color
@@ -171,9 +170,13 @@ public class HardwareTest_14877 extends LinearOpMode {
 
         double rightPropulsionCommand = 0.0;
         double leftPropulsionCommand = 0.0;
+        double lastRightPropulsionCommand = 0.0;
+        double lastLeftPropulsionCommand = 0.0;
 
         double swivelCommand = 0.0;
         double slideCommand = 0.0;
+        double lastSwivelCommand = 0.0;
+        double lastSlideCommand = 0.0;
 
         double markerCommand = 0.0;
 
@@ -199,41 +202,40 @@ public class HardwareTest_14877 extends LinearOpMode {
         /* ************************************
             MOTORS
         */
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
+        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
+        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
         leftDrive.setDirection(DcMotor.Direction.REVERSE);
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
-
 
         lift  = hardwareMap.get(DcMotor.class, "lift");
         slide = hardwareMap.get(DcMotor.class, "slide");
         lift.setDirection(DcMotor.Direction.FORWARD);
         slide.setDirection(DcMotor.Direction.FORWARD);
-
-
-        /* ************************************
-            LIMIT SWITCHES
-        */
-        armLimitExtended = hardwareMap.get(DigitalChannel.class, "arm_limit_extended");
-        armLimitExtended.setMode(DigitalChannel.Mode.INPUT);
-        armLimitRetracted = hardwareMap.get(DigitalChannel.class, "arm_limit_retracted");
-        armLimitRetracted.setMode(DigitalChannel.Mode.INPUT);
-
-        armLimitUp = hardwareMap.get(DigitalChannel.class, "arm_limit_up");
-        armLimitUp.setMode(DigitalChannel.Mode.INPUT);
-        armLimitDown = hardwareMap.get(DigitalChannel.class, "arm_limit_down");
-        armLimitDown.setMode(DigitalChannel.Mode.INPUT);
-
-
-        /* **************************************
-            DISTANCE AND COLOR
-         */
-        frontColorSensor = hardwareMap.get(ColorSensor.class, "front_color_distance");
-        frontDistanceSensor = hardwareMap.get(DistanceSensor.class, "front_color_distance");
-        backDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "back_distance");
+//
+//
+//        /* ************************************
+//            LIMIT SWITCHES
+//        */
+//        armLimitExtended = hardwareMap.get(DigitalChannel.class, "arm_limit_extended");
+//        armLimitExtended.setMode(DigitalChannel.Mode.INPUT);
+//        armLimitRetracted = hardwareMap.get(DigitalChannel.class, "arm_limit_retracted");
+//        armLimitRetracted.setMode(DigitalChannel.Mode.INPUT);
+//
+//        armLimitUp = hardwareMap.get(DigitalChannel.class, "arm_limit_up");
+//        armLimitUp.setMode(DigitalChannel.Mode.INPUT);
+//        armLimitDown = hardwareMap.get(DigitalChannel.class, "arm_limit_down");
+//        armLimitDown.setMode(DigitalChannel.Mode.INPUT);
+//
+//
+//        /* **************************************
+//            DISTANCE AND COLOR
+//         */
+//        frontColorSensor = hardwareMap.get(ColorSensor.class, "front_color_distance");
+//        frontDistanceSensor = hardwareMap.get(DistanceSensor.class, "front_color_distance");
+//        backDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "back_distance");
 
 
         /* ************************************
@@ -270,20 +272,43 @@ public class HardwareTest_14877 extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while ( opModeIsActive() ) {
 
+
             /** Telemetry Right Bumper */
-            telemetry.addData("Gamepad1 Right Y:", gamepad1.right_stick_x);
-            telemetry.addData("Gamepad1 Right X:", gamepad1.right_stick_y);
-            telemetry.addData("Gamepad1 Left X:", gamepad1.left_stick_y);
-            telemetry.addData("Gamepad1 Left Y:", gamepad1.left_stick_x);
-            telemetry.addData("Gamepad1 Right Bumper:", gamepad1.right_bumper);
-            telemetry.addData("Gamepad1 Left Bumper:", gamepad1.left_bumper);
+//            telemetry.addData("Gamepad1 Right X:", gamepad1.right_stick_x);
+            telemetry.addData("Gamepad1 Right Y:", gamepad1.right_stick_y);
+//            telemetry.addData("Gamepad1 Left X:", gamepad1.left_stick_x);
+            telemetry.addData("Gamepad1 Left Y:", gamepad1.left_stick_y);
+//            telemetry.addData("Gamepad1 Right Bumper:", gamepad1.right_bumper);
+//            telemetry.addData("Gamepad1 Left Bumper:", gamepad1.left_bumper);
 
 
-            /* Check  remote 1 */
-            // Tank Mode uses one stick to control each wheel.
-            // - This requires no math, but it is hard to drive forward slowly and keep straight.
+//            /* Check  remote 1 */
+//            // Tank Mode uses one stick to control each wheel.
+//            // - This requires no math, but it is hard to drive forward slowly and keep straight.
             rightPropulsionCommand  = -gamepad1.right_stick_y;
             leftPropulsionCommand   = -gamepad1.left_stick_y;
+
+            boolean stopped = gamepad1.left_stick_y  == 0.0 || gamepad1.right_stick_y == 0.0;
+            boolean turning = ( -gamepad1.left_stick_y > 0 && -gamepad1.right_stick_y < 0 ||  -gamepad1.left_stick_y < 0 && -gamepad1.right_stick_y > 0 );
+            boolean forward = !turning && ( -gamepad1.left_stick_y < 0 && -gamepad1.right_stick_y < 0 );
+
+            if ( stopped ) {
+                rightPropulsionCommand  = 0.0;
+                leftPropulsionCommand   = 0.0;
+            }
+
+            /*  Make sure the robot goes straight */
+            else if ( !turning ) {
+               if ( forward ) {
+                   rightPropulsionCommand  = leftPropulsionCommand = Math.max(leftPropulsionCommand, rightPropulsionCommand);
+               }
+
+               else {
+                   rightPropulsionCommand  = leftPropulsionCommand = Math.min(leftPropulsionCommand, rightPropulsionCommand);
+               }
+            }
+
+
 
             /** Bumpers left and right Team marker down and up */
             if ( gamepad1.right_bumper ) {
@@ -294,8 +319,8 @@ public class HardwareTest_14877 extends LinearOpMode {
             }
 
             /* Check  remote 2 */
-            slideCommand = -gamepad2.right_stick_y;
-            swivelCommand = -gamepad2.left_stick_y;
+            slideCommand = gamepad2.right_stick_y;
+            swivelCommand = gamepad2.left_stick_y;
 
 
             /* Limit the speed on slide motor */
@@ -312,64 +337,60 @@ public class HardwareTest_14877 extends LinearOpMode {
                 swivelCommand = SWIVEL_SPEED;
             }
 
-            telemetry.addData("Propulsion left:", rightPropulsionCommand);
-            telemetry.addData("Propulsion right:", leftPropulsionCommand);
-            telemetry.addData("Propulsion slide:", slideCommand);
-            telemetry.addData("Propulsion swivel:", swivelCommand);
 
-            /* Check sensors */
-            float hsvValues[] = {0F, 0F, 0F};
-            Color.RGBToHSV((int) (frontColorSensor.red() * SCALE_FACTOR),
-                    (int) (frontColorSensor.green() * SCALE_FACTOR),
-                    (int) (frontColorSensor.blue() * SCALE_FACTOR),
-                    hsvValues);
+//            /* Check sensors */
+//            float hsvValues[] = {0F, 0F, 0F};
+//            Color.RGBToHSV((int) (frontColorSensor.red() * SCALE_FACTOR),
+//                    (int) (frontColorSensor.green() * SCALE_FACTOR),
+//                    (int) (frontColorSensor.blue() * SCALE_FACTOR),
+//                    hsvValues);
 
             // send the info back to driver station using telemetry function.
-            telemetry.addData("Distance (cm)",
-                    String.format(Locale.US, "%.02f", frontDistanceSensor.getDistance(DistanceUnit.CM)));
-            telemetry.addData("Alpha", frontColorSensor.alpha());
-            telemetry.addData("Red  ", frontColorSensor.red());
-            telemetry.addData("Green", frontColorSensor.green());
-            telemetry.addData("Blue ", frontColorSensor.blue());
-            telemetry.addData("Hue", hsvValues[0]);
+//            telemetry.addData("Distance (cm)",
+//                    String.format(Locale.US, "%.02f", frontDistanceSensor.getDistance(DistanceUnit.CM)));
+//            telemetry.addData("Alpha", frontColorSensor.alpha());
+//            telemetry.addData("Red  ", frontColorSensor.red());
+//            telemetry.addData("Green", frontColorSensor.green());
+//            telemetry.addData("Blue ", frontColorSensor.blue());
+//            telemetry.addData("Hue", hsvValues[0]);
 
 
 //            telemetry.addData("raw ultrasonic", backDistanceSensor.rawUltrasonic());
 //            telemetry.addData("raw optical", backDistanceSensor.rawOptical());
-            if ( backDistanceSensor.cmOptical() > 1000 ) {
-                telemetry.addData("cm optical", "out of Range");
-            }
-            else {
-                telemetry.addData("cm optical", "%.2f cm", backDistanceSensor.cmOptical());
-            }
-            telemetry.addData("cm", "%.2f cm", backDistanceSensor.getDistance(DistanceUnit.CM));
-
-
-            /** Check Emergency situations */
-
-            if ( armAtHighest() && swivelingUp(swivelCommand) ) {
-
-                telemetry.addData("Status", "Limit Switch UP");
-                swivelCommand = 0;
-            }
-
-            if ( armAtLowest() && swivelingDown(swivelCommand) ) {
-
-                telemetry.addData("Status", "Limit Switch DOWN");
-                swivelCommand = 0;
-            }
-
-            if ( armCompletelyExtended() && extending(slideCommand)) {
-
-                telemetry.addData("Status", "Limit Switch EXTENDED");
-                slideCommand = 0;
-            }
-
-            if ( armCompletelyRetracted() && retracting(slideCommand) ) {
-
-                telemetry.addData("Status", "Limit Switch RETRACTED");
-                slideCommand = 0;
-            }
+//            if ( backDistanceSensor.cmOptical() > 1000 ) {
+//                telemetry.addData("cm optical", "out of Range");
+//            }
+//            else {
+//                telemetry.addData("cm optical", "%.2f cm", backDistanceSensor.cmOptical());
+//            }
+//            telemetry.addData("cm", "%.2f cm", backDistanceSensor.getDistance(DistanceUnit.CM));
+//
+//
+//            /** Check Emergency situations */
+//
+//            if ( armAtHighest() && swivelingUp(swivelCommand) ) {
+//
+//                telemetry.addData("Status", "Limit Switch UP");
+//                swivelCommand = 0;
+//            }
+//
+//            if ( armAtLowest() && swivelingDown(swivelCommand) ) {
+//
+//                telemetry.addData("Status", "Limit Switch DOWN");
+//                swivelCommand = 0;
+//            }
+//
+//            if ( armCompletelyExtended() && extending(slideCommand)) {
+//
+//                telemetry.addData("Status", "Limit Switch EXTENDED");
+//                slideCommand = 0;
+//            }
+//
+//            if ( armCompletelyRetracted() && retracting(slideCommand) ) {
+//
+//                telemetry.addData("Status", "Limit Switch RETRACTED");
+//                slideCommand = 0;
+//            }
 
             /* Get Current placement */
 
@@ -378,343 +399,40 @@ public class HardwareTest_14877 extends LinearOpMode {
                 telemetry.addData("VuForia", "We have a placement!!");
             }
 
-            /* Actions */
-            rightDrive.setPower(rightPropulsionCommand);
-            leftDrive.setPower(leftPropulsionCommand);
 
-            lift.setPower(swivelCommand);
-            slide.setPower(slideCommand);
 
+            if ((rightPropulsionCommand > 0) && (leftPropulsionCommand > 0)) {
+
+            }
+
+//            /* Actions */
+            if ( rightPropulsionCommand != lastRightPropulsionCommand ) {
+                /** Increasing power */
+                rightDrive.setPower(rightPropulsionCommand);
+                lastRightPropulsionCommand = rightPropulsionCommand;
+            }
+
+            if (leftPropulsionCommand != lastLeftPropulsionCommand ) {
+                leftDrive.setPower(leftPropulsionCommand);
+                lastLeftPropulsionCommand = leftPropulsionCommand;
+            }
+            if ( swivelCommand != lastSwivelCommand ) {
+                /** Increasing power */
+                lift.setPower(swivelCommand);
+                lastSwivelCommand = swivelCommand;
+            }
+
+            if (slideCommand != lastSlideCommand ) {
+                slide.setPower(slideCommand);
+                lastSlideCommand = slideCommand;
+            }
             marker.setPosition(markerCommand);
 
-
-            // 2) Drop the marker
-            //scoreMarker();
-
             telemetry.update();
         }
 
-
     }
 
-
-    /*********************************
-     * AUTONOMOUS HIGH LEVEL TASKS
-     */
-    private void landRobot() {
-
-        extendArm(4.0);
-    }
-
-
-    private void scoreMarker () {
-
-        navigation.getPlacement();
-        gotoPlacement( new FieldPlacement(MARKER_POSITION_X, MARKER_POSITION_Y), false);
-        dropMarker();
-    }
-
-
-
-    /*******************************
-     * ARM SLIDER HELPERS
-     */
-    public boolean retracting(double command) {
-
-        return (command > 0);
-    }
-
-    public boolean extending(double command) {
-
-        return (command > 0);
-    }
-
-    private void extendArm(double length) {
-
-        slideArm(SLIDE_OUT, length);
-
-    }
-
-    private void retractArm(double length) {
-
-        slideArm(SLIDE_IN, length);
-
-    }
-
-    /**
-     *
-     * @param direction : 1 forward, -1 backward
-     * @param lengthInInches : Change in length
-     */
-    private void slideArm(int direction, double lengthInInches) {
-
-        int moveCounts  = 0;
-        int newTarget   = 0;
-
-        if ( lengthInInches > 0 ) {
-
-            moveCounts = (int) (direction * lengthInInches * SLIDE_ENCODER_COUNTS_PER_INCH);
-            newTarget = slide.getCurrentPosition() + moveCounts;
-        }
-
-        slide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        slide.setPower(SLIDE_SPEED);
-
-        if ( lengthInInches == 0 ) {
-
-            slide.setPower(0);
-            return;
-        }
-
-        while ( true ) {
-
-            if ( lengthInInches > 0 ) {
-                if (newTarget - slide.getCurrentPosition() <= 0) {
-                    break;
-                }
-            }
-
-            if ( armCompletelyExtended() && direction == SLIDE_OUT ) {
-                break;
-            }
-            if ( armCompletelyRetracted() && direction == SLIDE_IN ) {
-                break;
-            }
-
-        }
-
-        slide.setPower(0);
-        return;
-    }
-
-
-    private boolean armCompletelyExtended() {
-
-        return !(this.armLimitExtended.getState() == true );
-    }
-
-
-    private boolean armCompletelyRetracted() {
-        return !(this.armLimitRetracted.getState() == true);
-    }
-
-
-
-
-    /*******************************
-     * ARM SWING HELPERS
-     */
-
-    private boolean armAtHighest() {
-
-        return !(this.armLimitUp.getState() == true);
-    }
-
-
-    private boolean armAtLowest() {
-
-        return !(this.armLimitDown.getState() == true);
-    }
-
-
-    private boolean swivelingUp(double command)  {
-
-        return (command > 0 );
-    }
-
-    private boolean swivelingDown(double command) {
-
-        return (command < 0);
-    }
-
-
-
-
-    private void justWait(double seconds) {
-
-        double now = runtime.seconds();
-
-        // keep looping while we are still active, and not on heading.
-        while (opModeIsActive() && ( runtime.seconds() - now < seconds)  ) {
-            currentRobotPlacement = navigation.getPlacement();
-            idle();
-            telemetry.update();
-        }
-    }
-
-
-
-    private void gotoPlacement(FieldPlacement destination, boolean setFinalOrientation) {
-
-        currentRobotPlacement = navigation.getPlacement();
-
-        double translation_x = destination.x - currentPlacement.x;
-        double translation_y = destination.y - currentPlacement.y;
-        double theta = Math.atan(translation_y / translation_x);
-
-        double rotation = currentPlacement.theta - theta;
-        double translation = Math.sqrt(Math.pow(translation_x,2) + Math.pow(translation_y, 2));
-
-        turn(rotation);
-        move(PROPULSION_FORWARD, translation);
-
-        if ( setFinalOrientation == true ) {
-            turn (destination.orientation - theta );
-        }
-
-    }
-
-
-    /******************************
-     * MARKER SWIVEL MOVEMENT
-     */
-    private void dropMarker() {
-
-        marker.setPosition(MARKER_DOWN);
-        justWait(2);
-        marker.setPosition(MARKER_UP);
-    }
-
-
-
-
-
-    /******************************
-     * PROPULSION HELPERS
-     */
-    private void turn( double angle) {
-
-        // keep looping while we are still active, and not on heading.
-        while (opModeIsActive() && !onHeading(TURNING_SPEED, angle, P_TURN_COEFF)) {
-            // Update telemetry & Allow time for other processes to run.
-            telemetry.update();
-        }
-
-        ElapsedTime holdTimer = new ElapsedTime();
-        holdTimer.reset();
-
-        while (opModeIsActive() && (holdTimer.time() < 0.5)) {
-            // Update telemetry & Allow time for other processes to run.
-            onHeading(TURNING_SPEED, angle, P_TURN_COEFF);
-            telemetry.update();
-        }
-
-        leftDrive.setPower(0);
-        rightDrive.setPower(0);
-        return;
-    }
-
-
-    private void move( int direction, double distanceInInches) {
-
-        int moveCounts = (int) (distanceInInches * direction * PROPULSION_ENCODER_COUNTS_PER_INCH);
-
-        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        leftDrive.setTargetPosition(moveCounts);
-
-        rightDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        leftDrive.setPower(Math.abs(DRIVE_SPEED));
-        rightDrive.setPower(Math.abs(DRIVE_SPEED));
-
-        while ( opModeIsActive() && leftDrive.isBusy() ) {
-            telemetry.addData("Autonomous Propulsion:",  " Started %7d", leftDrive.getTargetPosition());
-            idle();
-            telemetry.update();
-        }
-
-        leftDrive.setPower(0.0);
-        rightDrive.setPower(0.0);
-
-        // Turn off RUN_TO_POSITION
-        leftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        telemetry.update();
-        return;
-    }
-
-
-
-    /**
-     * Perform one cycle of closed loop heading control.
-     *
-     * @param speed     Desired speed of turn.
-     * @param angle     Absolute Angle (in Degrees) relative to last gyro reset.
-     *                  0 = fwd. +ve is CCW from fwd. -ve is CW from forward.
-     *                  If a relative angle is required, add/subtract from current heading.
-     * @param PCoeff    Proportional Gain coefficient
-     * @return
-     */
-    boolean onHeading(double speed, double angle, double PCoeff) {
-
-        double   error ;
-        double   steer ;
-        boolean  onTarget = false ;
-        double leftSpeed;
-        double rightSpeed;
-
-        // determine turn power based on +/- error
-        error = getHeadingError(angle);
-
-        if (Math.abs(error) <= HEADING_THRESHOLD) {
-            steer = 0.0;
-            leftSpeed  = 0.0;
-            rightSpeed = 0.0;
-            onTarget = true;
-        }
-        else {
-            steer = getSteer(error, PCoeff);
-            rightSpeed  = speed * steer;
-            leftSpeed   = -rightSpeed;
-        }
-
-        // Send desired speeds to motors.
-        leftDrive.setPower(leftSpeed);
-        rightDrive.setPower(rightSpeed);
-
-        // Display it for the driver.
-        telemetry.addData("Target", "%5.2f", angle);
-        telemetry.addData("Err/St", "%5.2f/%5.2f", error, steer);
-        telemetry.addData("Speed.", "%5.2f:%5.2f", leftSpeed, rightSpeed);
-
-        return onTarget;
-    }
-
-
-    /**
-     * getError determines the error between the target angle and the robot's current heading
-     * @param   targetAngle  Desired angle (relative to global reference established at last Gyro Reset).
-     * @return  error angle: Degrees in the range +/- 180. Centered on the robot's frame of reference
-     *          +ve error means the robot should turn LEFT (CCW) to reduce error.
-     */
-    public double getHeadingError(double targetAngle) {
-
-        double robotError;
-        double actualAngle;
-
-        Orientation angles   = gyro.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        actualAngle = AngleUnit.DEGREES.normalize(AngleUnit.DEGREES.fromUnit(angles.angleUnit, angles.firstAngle));
-
-        // calculate error in -179 to +180 range  (
-        robotError = targetAngle - actualAngle;
-        while (robotError > 180)  robotError -= 360;
-        while (robotError <= -180) robotError += 360;
-        return robotError;
-    }
-
-
-    /**
-     * returns desired steering force.  +/- 1 range.  +ve = steer left
-     * @param error   Error angle in robot relative degrees
-     * @param PCoeff  Proportional Gain Coefficient
-     * @return
-     */
-    public double getSteer(double error, double PCoeff) {
-
-        return Range.clip(error * PCoeff, -1, 1);
-    }
 
 
 

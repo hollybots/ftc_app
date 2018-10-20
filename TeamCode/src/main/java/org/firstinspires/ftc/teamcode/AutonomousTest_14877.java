@@ -29,45 +29,25 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import org.firstinspires.ftc.teamcode.Navigation_14877;
+import android.util.Log;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
-import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
-import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
-import org.firstinspires.ftc.teamcode.FieldPlacement;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.YZX;
-import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.BACK;
-import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.FRONT;
-
-import android.util.Log;
 
 /**
  * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
@@ -82,9 +62,9 @@ import android.util.Log;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Basic: Autonomous 14877", group="Linear Opmode")
+@TeleOp(name="Basic: Autonomous Tesing 14877", group="Linear Opmode")
 //@Disabled
-public class Autonomous_14877 extends LinearOpMode {
+public class AutonomousTest_14877 extends LinearOpMode {
 
 
     private static final boolean DEBUG                          = true;
@@ -353,8 +333,6 @@ public class Autonomous_14877 extends LinearOpMode {
 
             FieldPlacement target = new FieldPlacement(0,0,90);
 
-
-
             gotoPlacement(target, false);
 
             target.x = 10;
@@ -378,21 +356,37 @@ public class Autonomous_14877 extends LinearOpMode {
     /*********************************
      * AUTONOMOUS HIGH LEVEL TASKS
      */
+
+    /**
+     * landRobot()
+     *
+     * High level command that will perform all the operations required to land the robot on the field
+     * at the beginning of the game.
+     */
     private void landRobot() {
 
         extendArm(4.0);
     }
 
-
+    /**
+     * scoreMarker()
+     *
+     * High level command that will perform all the operations required to place the marker from the landing position
+     * at the beginning of the game.
+     */
     private void scoreMarker () {
 
         gotoPlacement( new FieldPlacement(MARKER_POSITION_X, MARKER_POSITION_Y), false);
         dropMarker();
     }
 
+
+    /**
+     * scanForGold()
+     *
+     * High level command that will perform all the operations required to find the gold mineral and displace it
+     */
     private void scanForGold () {
-
-
 
         gotoPlacement( new FieldPlacement(MARKER_POSITION_X, MARKER_POSITION_Y), false);
         dropMarker();
@@ -403,22 +397,55 @@ public class Autonomous_14877 extends LinearOpMode {
     /*******************************
      * ARM SLIDER HELPERS
      */
+
+    /**
+     * retracting()
+     *
+     * Returns true if the arm is retracting.
+     *
+     * @param command           :  Power to the arm
+     * @return
+     */
     public boolean retracting(double command) {
 
         return (command > 0);
     }
 
+
+    /**
+     * extending()
+     *
+     * Returns true if the arm is extending.
+     *
+     * @param command           :  Power to the arm
+     * @return
+     */
     public boolean extending(double command) {
 
         return (command > 0);
     }
 
+
+    /**
+     * extendArm()
+     *
+     * Extend the arm a given amount of inches
+     *
+     * @param length            : length in inches to extend
+     */
     private void extendArm(double length) {
 
         slideArm(SLIDE_OUT, length);
 
     }
 
+    /**
+     * retractArm()
+     *
+     * Retracts the arm a given amount of inches
+     *
+     * @param length            : length in inches to retract
+     */
     private void retractArm(double length) {
 
         slideArm(SLIDE_IN, length);
@@ -427,7 +454,8 @@ public class Autonomous_14877 extends LinearOpMode {
 
     /**
      *
-     * @param direction : 1 forward, -1 backward
+     * @param direction : SLIDE_OUT or SLIDE_IN
+     *
      * @param lengthInInches : Change in length
      */
     private void slideArm(int direction, double lengthInInches) {
@@ -471,14 +499,27 @@ public class Autonomous_14877 extends LinearOpMode {
         return;
     }
 
-
+    /**
+     * armCompletelyExtended()
+     *
+     * Return true if the EXTENSION limit switch has been reached.
+     *
+     * @return
+     */
     private boolean armCompletelyExtended() {
 
         return !(this.armLimitExtended.getState() == true );
     }
 
-
+    /**
+     * armCompletelyRetracted()
+     *
+     * Returns true if the RETRACTED limit switch has been reached.
+     *
+     * @return
+     */
     private boolean armCompletelyRetracted() {
+
         return !(this.armLimitRetracted.getState() == true);
     }
 
@@ -488,33 +529,71 @@ public class Autonomous_14877 extends LinearOpMode {
     /*******************************
      * ARM SWING HELPERS
      */
-
+    /**
+     * armAtHighest()
+     *
+     * Returns true if the LIMIT HIGH switch has been reached.
+     *
+     * @return
+     */
     private boolean armAtHighest() {
 
         return !(this.armLimitUp.getState() == true);
     }
 
-
+    /**
+     * armLimitDown()
+     *
+     * Returns true if the LIMIT LOW switch has been reached.
+     *
+     * @return
+     */
     private boolean armAtLowest() {
 
         return !(this.armLimitDown.getState() == true);
     }
 
-
+    /**
+     * swivelingUp()
+     *
+     * Returns true if the arm is going up'
+     *
+     * @param command           :  Command sent to the arm swivel motor
+     *
+     * @return
+     */
     private boolean swivelingUp(double command)  {
 
         return (command > 0 );
     }
 
+
+    /**
+     * swivelingDown()
+     *
+     * Returns true if the arm is going down
+     *
+     * @param command           :  Command sent to the arm swivel motor
+     *
+     * @return
+     */
     private boolean swivelingDown(double command) {
 
         return (command < 0);
     }
 
 
-
-
+    /**
+     * justWait()
+     *
+     * Just like that.  This function does nothing but wait while allowing to other processes to run
+     *
+     * @param seconds       : any number of seconds.  Can be less than 1
+     *
+     */
     private void justWait(double seconds) {
+
+        seconds = Math.abs(seconds);
 
         double now = runtime.seconds();
 
@@ -527,7 +606,16 @@ public class Autonomous_14877 extends LinearOpMode {
     }
 
 
-
+    /**
+     * gotoPlacement()
+     *
+     * This function takes a FieldPlacement object and position the robot according the x,y,orientation values
+     * in that object.
+     *
+     * @param  destination                      : x,y, orientation values (see the FieldPlacement class)
+     * @param setFinalOrientation               : true if the robot should go to its final orientation
+     *                                            false, if only placement is important regardless of orientation
+     */
     private void gotoPlacement(FieldPlacement destination, boolean setFinalOrientation) {
 
         while(true) {
@@ -535,7 +623,7 @@ public class Autonomous_14877 extends LinearOpMode {
             if (currentRobotPlacement != null) {
                 break;
             }
-            turn(45);
+            turn(30);
         }
 
 
@@ -550,7 +638,7 @@ public class Autonomous_14877 extends LinearOpMode {
         move(this.PROPULSION_FORWARD, translation);
 
         if ( setFinalOrientation == true ) {
-            turn (destination.orientation - theta );
+            gotoHeading(destination.orientation - theta );
         }
 
     }
@@ -558,6 +646,12 @@ public class Autonomous_14877 extends LinearOpMode {
 
     /******************************
      * MARKER SWIVEL MOVEMENT
+     */
+
+    /**
+     * dropMarker()
+     *
+     * Command that will command the servo to lower the arm to drop position.
      */
     private void dropMarker() {
 
@@ -568,12 +662,43 @@ public class Autonomous_14877 extends LinearOpMode {
 
 
 
-
-
     /******************************
      * PROPULSION HELPERS
      */
-    private void turn( double angle) {
+
+    /**
+     * turn()
+     *
+     * This function will add the angle passed in parameter to the current heading
+     *
+     * @param angle:    degrees to add to the current heading
+     */
+    private void turn(double angle) {
+
+        Orientation angles   = gyro.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        double actualAngle = AngleUnit.DEGREES.normalize(AngleUnit.DEGREES.fromUnit(angles.angleUnit, angles.firstAngle));
+        double finalTheta = actualAngle + angle;
+
+        // keep looping while we are still active, and not on heading.
+        while (opModeIsActive() && !onHeading(TURNING_SPEED, finalTheta, P_TURN_COEFF)) {
+            idle();
+        }
+
+        justWait(0.5);
+
+        leftDrive.setPower(0.0);
+        rightDrive.setPower(0.0);
+        return;
+    }
+
+    /**
+     * gotoHeading()
+     *
+     * Turn until heading is equal to the angle passed in parameter
+     *
+     * @param angle         : Final heading in degrees
+     */
+    private void gotoHeading(double angle) {
 
         // keep looping while we are still active, and not on heading.
         while (opModeIsActive() && !onHeading(TURNING_SPEED, angle, P_TURN_COEFF)) {
@@ -588,7 +713,12 @@ public class Autonomous_14877 extends LinearOpMode {
         return;
     }
 
-
+    /**
+     *  move()
+     *
+     * @param direction             : PROPULSION_FORWARD or PROPULSION_BACKWARD
+     * @param distanceInInches      : Distance in inches
+     */
     private void move( int direction, double distanceInInches) {
 
         dbugThis("Distance in inches: " + distanceInInches);
@@ -637,17 +767,17 @@ public class Autonomous_14877 extends LinearOpMode {
         }
         dbugThis("Done Moving");
 
-//        justWait(2);
-
-
-//
-
-
         telemetry.update();
         return;
     }
 
-
+    /**
+     * isPositionWithinAcceptableTargetRange()
+     *
+     * @param position
+     * @param target
+     * @return              : true if position is within target range according to the rule ERROR_POSITION_COUNT
+     */
     public boolean isPositionWithinAcceptableTargetRange(int position, int target) {
 
         return Math.abs(position) > Math.abs(target) - ERROR_POSITION_COUNT && Math.abs(position) <  Math.abs(target) + ERROR_POSITION_COUNT;
@@ -655,7 +785,9 @@ public class Autonomous_14877 extends LinearOpMode {
 
 
     /**
-     * Perform one cycle of closed loop heading control.
+     * onHeading()
+     *
+     * Performs one cycle of closed loop heading control.
      *
      * @param speed     Desired speed of turn.
      * @param angle     Absolute Angle (in Degrees) relative to last gyro reset.
@@ -701,7 +833,10 @@ public class Autonomous_14877 extends LinearOpMode {
 
 
     /**
-     * getError determines the error between the target angle and the robot's current heading
+     * getError()
+     *
+     * Determines the error between the target angle and the robot's current heading
+     *
      * @param   targetAngle  Desired angle (relative to global reference established at last Gyro Reset).
      * @return  error angle: Degrees in the range +/- 180. Centered on the robot's frame of reference
      *          +ve error means the robot should turn LEFT (CCW) to reduce error.
@@ -727,7 +862,10 @@ public class Autonomous_14877 extends LinearOpMode {
 
 
     /**
-     * returns desired steering force.  +/- 1 range.  +ve = steer left
+     * getSteer()
+     *
+     * Returns desired steering force.  +/- 1 range.  +ve = steer left
+     *
      * @param error   Error angle in robot relative degrees
      * @param PCoeff  Proportional Gain Coefficient
      * @return
@@ -737,6 +875,14 @@ public class Autonomous_14877 extends LinearOpMode {
         return Range.clip(error * PCoeff, -1, 1);
     }
 
+
+    /**
+     * dbugThis()
+     *
+     * Writes a string in the LogCat windows under the "FIRST" tag
+     *
+     * @param s             : String to write
+     */
     private void dbugThis(String s) {
 
         if ( this.DEBUG == true ) {
