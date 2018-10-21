@@ -29,6 +29,8 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import android.util.Log;
+
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -74,6 +76,8 @@ public class Navigation_14877 {
 
     private  Telemetry telemetry;
 
+    private boolean DEBUG   = false;
+
     /**
      * {@link #vuforia} is the variable we will use to store our instance of the Vuforia
      * localization engine.
@@ -103,9 +107,10 @@ public class Navigation_14877 {
                      VuforiaLocalizer.CameraDirection cameraChoice,
                      int cameraForwardDisplacement,
                      int cameraLeftDisplacement,
-                     int cameraVerticalDisplacement)
+                     int cameraVerticalDisplacement,
+                     boolean debug)
     {
-
+        this.DEBUG  = debug;
         this.telemetry = telemetry;
 
         /*********************************************
@@ -255,7 +260,8 @@ public class Navigation_14877 {
 
             if (((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible()) {
 
-                telemetry.addData("Visible Target", trackable.getName());
+                //telemetry.addData("Visible Target", trackable.getName());
+                dbugThis(String.format("Visible Target: %s", trackable.getName()));
                 targetVisible = true;
 
                 // getUpdatedRobotLocation() will return null if no new information is available since
@@ -285,9 +291,19 @@ public class Navigation_14877 {
 
         else {
 
-            telemetry.addData("Visible Target", "none");
+            //telemetry.addData("Visible Target", "none");
+            dbugThis(String.format("Visible Target: %s","None"));
         }
 
         return placement;
     }
+
+
+    private void dbugThis(String s) {
+
+        if ( this.DEBUG == true ) {
+            Log.d("FIRST:", s);
+        }
+    }
+
 }

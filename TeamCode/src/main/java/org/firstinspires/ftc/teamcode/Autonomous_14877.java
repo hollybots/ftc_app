@@ -284,7 +284,8 @@ public class Autonomous_14877 extends LinearOpMode {
             CAMERA_CHOICE,
             CAMERA_FORWARD_DISPLACEMENT,
             CAMERA_VERTICAL_DISPLACEMENT,
-            CAMERA_LEFT_DISPLACEMENT);
+            CAMERA_LEFT_DISPLACEMENT,
+            this.DEBUG);
 
 
 

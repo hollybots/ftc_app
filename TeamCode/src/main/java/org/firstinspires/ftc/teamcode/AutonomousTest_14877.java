@@ -128,9 +128,8 @@ public class AutonomousTest_14877 extends LinearOpMode {
     private static final double     P_TURN_COEFF            = 0.5;     // Larger is more responsive, but also less stable
     private static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
 
-    // Declare OpMode members.
+    // Timekeeper OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
-    private FieldPlacement currentPlacement;
 
 
     // Robot Hardware
@@ -168,7 +167,7 @@ public class AutonomousTest_14877 extends LinearOpMode {
     private Navigation_14877 navigation;
 
     // Placement of the robot in field coordinates
-    FieldPlacement  currentRobotPlacement = null;
+    private FieldPlacement  currentRobotPlacement = null;
 
 
     @Override
@@ -264,7 +263,8 @@ public class AutonomousTest_14877 extends LinearOpMode {
             CAMERA_CHOICE,
             CAMERA_FORWARD_DISPLACEMENT,
             CAMERA_VERTICAL_DISPLACEMENT,
-            CAMERA_LEFT_DISPLACEMENT);
+            CAMERA_LEFT_DISPLACEMENT,
+            this.DEBUG);
 
 
 
@@ -335,9 +335,9 @@ public class AutonomousTest_14877 extends LinearOpMode {
 
             gotoPlacement(target, false);
 
-            target.x = 10;
-            target.y = 10;
-            gotoPlacement(target, true);
+//            target.x = 10;
+//            target.y = 10;
+//            gotoPlacement(target, true);
 
 //            turn(90);
 //            move(this.PROPULSION_FORWARD, 10);
@@ -619,20 +619,37 @@ public class AutonomousTest_14877 extends LinearOpMode {
     private void gotoPlacement(FieldPlacement destination, boolean setFinalOrientation) {
 
         while(true) {
+            justWait(1);
             currentRobotPlacement = navigation.getPlacement();
             if (currentRobotPlacement != null) {
                 break;
             }
-            turn(30);
+            turn(15);
+
         }
 
+        double translation_x = destination.x - currentRobotPlacement.x;
+        double translation_y = destination.y - currentRobotPlacement.y;
+        double theta = Math.toDegrees(Math.atan2(translation_y, translation_x));
 
-        double translation_x = destination.x - currentPlacement.x;
-        double translation_y = destination.y - currentPlacement.y;
-        double theta = Math.atan(translation_y / translation_x);
+        dbugThis("** Entering gotoPlacement **");
+        dbugThis(String.format("Current position X: %2.2f", currentRobotPlacement.x));
+        dbugThis(String.format("Current position y: %2.2f", currentRobotPlacement.y));
+        dbugThis(String.format("Current orientation: %2.2f", currentRobotPlacement.orientation));
 
-        double rotation = currentPlacement.theta - theta;
-        double translation = Math.sqrt(Math.pow(translation_x,2) + Math.pow(translation_y, 2));
+        dbugThis(String.format("Target position X: %2.2f", destination.x));
+        dbugThis(String.format("Target position y: %2.2f", destination.y));
+
+        dbugThis(String.format("Translation Y: %2.2f",translation_y));
+        dbugThis(String.format("Translation X: %2.2f",translation_x));
+        dbugThis(String.format("Heading Change to: %2.2f", theta));
+
+
+        double rotation = theta - currentRobotPlacement.orientation;
+        double translation = Math.sqrt(Math.pow(translation_x, 2) + Math.pow(translation_y, 2));
+
+        dbugThis(String.format("rotation:  %2.2f", rotation));
+        dbugThis(String.format("translation: %2.2f", translation));
 
         turn(rotation);
         move(this.PROPULSION_FORWARD, translation);
@@ -824,9 +841,9 @@ public class AutonomousTest_14877 extends LinearOpMode {
         rightDrive.setPower(rightSpeed);
 
         // Display it for the driver.
-        telemetry.addData("Target", "%5.2f", angle);
-        telemetry.addData("Err/St", "%5.2f/%5.2f", error, steer);
-        telemetry.addData("Speed.", "%5.2f:%5.2f", leftSpeed, rightSpeed);
+//        dbugThis(String.format("Target: %5.2f", angle));
+//        dbugThis(String.format("Err/St: %5.2f/%5.2f", error, steer));
+//        dbugThis(String.format("Speed : %5.2f:%5.2f", leftSpeed, rightSpeed));
 
         return onTarget;
     }

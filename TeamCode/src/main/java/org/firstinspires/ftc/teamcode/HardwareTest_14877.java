@@ -72,9 +72,11 @@ import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocaliz
 //@Disabled
 public class HardwareTest_14877 extends LinearOpMode {
 
+    private static final boolean DEBUG                          = true;
+
     /* Will be injected */
-    protected double MARKER_POSITION_X;
-    protected double MARKER_POSITION_Y;
+    private static final double MARKER_POSITION_X                = 72.0;
+    private static final double MARKER_POSITION_Y                = -72.0;
 
     /**
      * VUforia translation from the the robot center where x -> front, y -> left and  z -> up
@@ -89,7 +91,8 @@ public class HardwareTest_14877 extends LinearOpMode {
     private final double SCALE_FACTOR = 255;
 
 
-    private static final double REV_COUNTS_PER_MOTOR_REV        = 1142;                 // eg: REV Motor Encoder
+    private static final double TORQUENADO_COUNTS_PER_MOTOR_REV        = 1440;                 // eg: REV Motor Encoder
+    private static final double NEVEREST40_COUNTS_PER_MOTOR_REV        = 1120;                 // eg: REV Motor Encoder
 
     private static final double SWIVEL_DOWN                      = 1;
     private static final double SWIVEL_UP                        = -1;
@@ -106,25 +109,32 @@ public class HardwareTest_14877 extends LinearOpMode {
 
     private static final double SLIDE_DRIVE_GEAR_REDUCTION      = 1.0;                  // This is < 1.0 if geared UP
     private static final double SLIDE_COIL_CIRCUMFERENCE        = 1.0 * 3.14159;        // For figuring circumference
-    private static final double SLIDE_ENCODER_COUNTS_PER_INCH   = (REV_COUNTS_PER_MOTOR_REV * SLIDE_DRIVE_GEAR_REDUCTION) / SLIDE_COIL_CIRCUMFERENCE;
+    private static final double SLIDE_ENCODER_COUNTS_PER_INCH   = (NEVEREST40_COUNTS_PER_MOTOR_REV * SLIDE_DRIVE_GEAR_REDUCTION) / SLIDE_COIL_CIRCUMFERENCE;
 
     private static final int PROPULSION_FORWARD                  = 1;
-    private static final int PROPULSION_BACKWARD                 = 1;
-
-    private static final double PROPULSION_DRIVE_GEAR_REDUCTION     = 2.0;                  // This is < 1.0 if geared UP
-    private static final double WHEEL_CIRCUMFERENCE                 = 4.0 * 3.14159;        // For figuring circumference
-    private static final double PROPULSION_ENCODER_COUNTS_PER_INCH  = (REV_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
-
-    private static final double DRIVE_SPEED                     = 0.8;
+    private static final int PROPULSION_BACKWARD                 = -1;
+    private static final int ERROR_POSITION_COUNT                = 10;
+    private static final double DRIVE_SPEED                     = 0.7;
+    /***  IMPORTANT NOTE IF YOU DONT WANT TO GET STUCK in an infinite loop while turning:
+     P_TURN_COEFF * TURNING_SPEED must be > 0.1
+     ************************************************************************* */
     private static final double TURNING_SPEED                   = 0.3;
 
+    private static final double PROPULSION_DRIVE_GEAR_REDUCTION     = 1.3;                  // This is < 1.0 if geared UP > 1 we are gering down (the small drives the big)
+    private static final double WHEEL_CIRCUMFERENCE                 = 4.0 * 3.14159;        // For figuring circumference
+    private static final double PROPULSION_ENCODER_COUNTS_PER_INCH  = (TORQUENADO_COUNTS_PER_MOTOR_REV * PROPULSION_DRIVE_GEAR_REDUCTION) / WHEEL_CIRCUMFERENCE;
+
+
+
     private static final double     HEADING_THRESHOLD       = 1.0 ;      // As tight as we can make it with an integer gyro
-    private static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
+    /***  IMPORTANT NOTE IF YOU DONT WANT TO GET STUCK in an infinite loop while turning:
+     P_TURN_COEFF * TURNING_SPEED must be > 0.1
+     ************************************************************************* */
+    private static final double     P_TURN_COEFF            = 0.5;     // Larger is more responsive, but also less stable
     private static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
 
-    // Declare OpMode members.
+    // Timekeeper OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
-    private FieldPlacement currentPlacement;
 
 
     // Robot Hardware
@@ -143,9 +153,9 @@ public class HardwareTest_14877 extends LinearOpMode {
     private DigitalChannel armLimitDown = null;
 
 
-    private ColorSensor frontColorSensor = null;
-    private DistanceSensor frontDistanceSensor = null;
-    private ModernRoboticsI2cRangeSensor backDistanceSensor = null;
+//    private ColorSensor frontColorSensor = null;
+//    private DistanceSensor frontDistanceSensor = null;
+//    private ModernRoboticsI2cRangeSensor backDistanceSensor = null;
 
 
     /**
@@ -162,7 +172,9 @@ public class HardwareTest_14877 extends LinearOpMode {
     private Navigation_14877 navigation;
 
     // Placement of the robot in field coordinates
-    FieldPlacement  currentRobotPlacement = null;
+    private FieldPlacement  currentRobotPlacement = null;
+
+
 
 
     @Override
@@ -247,7 +259,8 @@ public class HardwareTest_14877 extends LinearOpMode {
             CAMERA_CHOICE,
             CAMERA_FORWARD_DISPLACEMENT,
             CAMERA_VERTICAL_DISPLACEMENT,
-            CAMERA_LEFT_DISPLACEMENT);
+            CAMERA_LEFT_DISPLACEMENT,
+    this.DEBUG);
 
 
 
