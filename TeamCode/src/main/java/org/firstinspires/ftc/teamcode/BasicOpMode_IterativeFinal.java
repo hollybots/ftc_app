@@ -58,7 +58,7 @@ import java.util.Locale;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 @TeleOp(name="Iterative: Final", group="Iterative")
-//@Disabled
+@Disabled
 public class BasicOpMode_IterativeFinal extends OpMode
 {
     // Declare OpMode members.

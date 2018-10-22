@@ -72,7 +72,6 @@ public class Navigation_14877 {
     private static final VuforiaLocalizer.CameraDirection CAMERA_CHOICE = BACK;
 
     private OpenGLMatrix lastLocation = null;
-    private boolean targetVisible = false;
 
     private  Telemetry telemetry;
 
@@ -253,7 +252,7 @@ public class Navigation_14877 {
 
     public FieldPlacement getPlacement() {
 
-        boolean notFound = true;
+        boolean targetVisible = false;
         FieldPlacement placement = null;
 
         for (VuforiaTrackable trackable : allTrackables) {

@@ -17,6 +17,8 @@ public class FieldPlacement {
         r = Math.sqrt(x*x + y*y);
         theta = Math.acos(x/r);
 
+        this.orientation = 0.0;
+
     }
 
     public FieldPlacement(double x, double y, double orientation) {
