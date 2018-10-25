@@ -199,8 +199,8 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
 
             /* Get Current placement */
 
-            currentRobotPlacement = navigation.getPlacement();
-            if ( currentRobotPlacement != null ) {
+            FieldPlacement placement = navigation.getPlacement();
+            if ( placement != null ) {
                 telemetry.addData("VuForia", "We have a placement!!");
             }
 

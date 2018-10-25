@@ -46,11 +46,11 @@ public class AutonomousTest_14877 extends AllAutonomousOpModes_14877 {
             FieldPlacement target = new FieldPlacement(-72,72,90);
             gotoPlacement(target, true);
 
-            justWait(2);
+            justWait(1);
 
-            target.x = 0;
-            target.y = 0;
-            gotoPlacement(target, false);
+            target.x = 6.0;
+            target.y = 30.;
+            gotoPlacement(target, true);
 
 
             break;

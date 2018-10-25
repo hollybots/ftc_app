@@ -33,6 +33,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.AllOpModes_14877;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import java.lang.Override;
 
 import android.util.Log;
 
@@ -85,9 +86,54 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
+            scoreMarker();
+
             break;
         }
 
     }
+
+
+
+    /*********************************
+     * AUTONOMOUS HIGH LEVEL TASKS
+     */
+
+    /**
+     * landRobot()
+     *
+     * High level command that will perform all the operations required to land the robot on the field
+     * at the beginning of the game.
+     */
+    protected void landRobot() {
+
+        extendArm(4.0);
+    }
+
+    /**
+     * scoreMarker()
+     *
+     * Overriden in the specific Position OpCodes.
+     *
+     * High level command that will perform all the operations required to place the marker from the landing position
+     * at the beginning of the game.
+     */
+    public void scoreMarker () { }
+
+
+    /**
+     * scanForGold()
+     *
+     * Overriden in the specific Position OpCodes.
+     *
+     * High level command that will perform all the operations required to find the gold mineral and displace it
+     */
+    protected void scanForGold () {
+
+
+    }
+
+
+
 
 }

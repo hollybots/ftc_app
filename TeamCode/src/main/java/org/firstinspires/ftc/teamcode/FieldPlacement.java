@@ -10,6 +10,17 @@ public class FieldPlacement {
 
     protected double orientation;
 
+
+    public FieldPlacement(FieldPlacement another) {
+        this.x              = another.x;
+        this.y              = another.y;
+        this.theta          = another.theta;
+        this.r              = another.r;
+        this.orientation    = another.orientation;
+
+
+    }
+
     public FieldPlacement(double x, double y) {
 
         this.x = x;
@@ -38,6 +49,8 @@ public class FieldPlacement {
         this.r = r;
         x = r * Math.cos(theta);
         y = r * Math.sin(theta);
+
+        this.orientation = 0.0;
 
     }
 

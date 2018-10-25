@@ -8,8 +8,8 @@ public class Autonomous_14877_Red_Left extends AllAutonomousOpModes_14877 {
     @Override
     public void runOpMode() {
 
-        MARKER_POSITION_X                = 72.0;
-        MARKER_POSITION_Y                = -72.0;
+        MARKER_POSITION_X                = 60.0;
+        MARKER_POSITION_Y                = -60.0;
 
         FieldPlacement[] MINERALS       = new FieldPlacement[3];
 
@@ -18,6 +18,18 @@ public class Autonomous_14877_Red_Left extends AllAutonomousOpModes_14877 {
         MINERALS[3] = new FieldPlacement(-24.0, -48.0 );
 
         super.runOpMode();
+    }
+
+    @Override
+    public void scoreMarker () {
+        gotoPlacement( new FieldPlacement(12.0, -60.0, 90.0), false);
+        gotoPlacement( new FieldPlacement(MARKER_POSITION_X, MARKER_POSITION_Y, 90.0), false);
+        dropMarker();
+    }
+
+    @Override
+    protected void scanForGold () {
+
     }
 
 }

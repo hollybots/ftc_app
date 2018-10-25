@@ -181,7 +181,7 @@ public class AllOpModes_14877 extends LinearOpMode {
     protected Navigation_14877 navigation;
 
     // Placement of the robot in field coordinates -> it is important to set this to null, unless you know the exact position of your robot
-    protected FieldPlacement  currentRobotPlacement = null;
+    private FieldPlacement  currentRobotPlacement = null;
 
 
     @Override
@@ -291,44 +291,7 @@ public class AllOpModes_14877 extends LinearOpMode {
 
 
 
-    /*********************************
-     * AUTONOMOUS HIGH LEVEL TASKS
-     */
 
-    /**
-     * landRobot()
-     *
-     * High level command that will perform all the operations required to land the robot on the field
-     * at the beginning of the game.
-     */
-    protected void landRobot() {
-
-        extendArm(4.0);
-    }
-
-    /**
-     * scoreMarker()
-     *
-     * High level command that will perform all the operations required to place the marker from the landing position
-     * at the beginning of the game.
-     */
-    protected void scoreMarker () {
-
-        gotoPlacement( new FieldPlacement(MARKER_POSITION_X, MARKER_POSITION_Y), false);
-        dropMarker();
-    }
-
-
-    /**
-     * scanForGold()
-     *
-     * High level command that will perform all the operations required to find the gold mineral and displace it
-     */
-    protected void scanForGold () {
-
-        gotoPlacement( new FieldPlacement(MARKER_POSITION_X, MARKER_POSITION_Y), false);
-        dropMarker();
-    }
 
 
 
@@ -573,16 +536,24 @@ public class AllOpModes_14877 extends LinearOpMode {
      */
     protected void gotoPlacement(FieldPlacement destination, boolean setFinalOrientation) {
 
-        if ( currentRobotPlacement == null ) {
+        FieldPlacement newPlacement = null;
 
-            while (true) {
-                justWait(1);
-                currentRobotPlacement = navigation.getPlacement();
-                if (currentRobotPlacement != null) {
-                    break;
-                }
-                turn(15);
+        /* Check if we can "upgrade" our positioning */
+        while (true) {
+
+            justWait(1);
+            newPlacement = navigation.getPlacement();
+
+            if ( newPlacement != null ) {
+                currentRobotPlacement = new FieldPlacement(newPlacement);
+                break;
             }
+
+            else if ( currentRobotPlacement != null ) {
+                break;
+            }
+
+            turn(15);
         }
 
         double translation_x = destination.x - currentRobotPlacement.x;
@@ -615,10 +586,11 @@ public class AllOpModes_14877 extends LinearOpMode {
         dbugThis(String.format("Performing translation: %2.2f", translation));
         move(this.PROPULSION_FORWARD, translation);
 
-        currentRobotPlacement = destination;
+        currentRobotPlacement = new FieldPlacement(destination);
         currentRobotPlacement.orientation = theta;
 
         if ( setFinalOrientation == true ) {
+
             rotation = destination.orientation - theta;
             dbugThis(String.format("Performing the final rotation:  %2.2f", rotation));
             turn(rotation );
