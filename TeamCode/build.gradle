@@ -28,4 +28,6 @@ repositories {
     flatDir { dirs '../libs' }
 }
 dependencies {
+    implementation project(':openCVLibrary3')
+    implementation project(':DogeCV')
 }

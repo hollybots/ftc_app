@@ -29,13 +29,21 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import com.disnodeteam.dogecv.CameraViewDisplay;
+import com.disnodeteam.dogecv.DogeCV;
+import com.disnodeteam.dogecv.detectors.roverrukus.GoldAlignDetector;
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.teamcode.AllOpModes_14877;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import java.lang.Override;
 
 import android.util.Log;
+
+import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.BACK;
 
 /**
  * This file contains an minimal example of a Linear "OpMode". An OpMode is a 'program' that runs in either
@@ -53,6 +61,26 @@ import android.util.Log;
 @TeleOp(name="Basic: Autonomous 14877", group="Linear Opmode")
 @Disabled
 public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
+
+
+    /**
+     * NAVIGATION PARAMS
+     */
+    // VuForia Key, register online
+    protected static final String VUFORIA_KEY = "AXINfYT/////AAAAGfcLttUpcU8GheQqMMZAtnFDz/qRJOlHnxEna51521+PFcmEWc02gUQ1s4DchmXk+fFvt+afRNF+2UoUgoAyQNtfVjRNS0u4f5o4kka/jERVEtKlJ27pO4euCEjE1DQ+l8ecADKTd1aWu641OheSf/RqDJ7BSvDct/PYRfRLfShAfBUxaFT3+Ud+6EL31VTmZKiylukvCnHaaQZxDmB2cCDdYFeK2CDwNIWoMx2VvweehNARttNvSR3cp4AepbtWnadsEnDQaStDv8jN09iE7CRWmMY8rrP8ba/O/eVlz0vzU7Fhtf2jXpSvCJn0qDw+1UK/bHsD/vslhdp+CBNcW7bT3gNHgTOrnIcldX2YhgZS";
+
+    // Select which camera you want use.  The FRONT camera is the one on the same side as the screen.
+    // Valid choices are:  BACK or FRONT
+    protected static final VuforiaLocalizer.CameraDirection CAMERA_CHOICE     = BACK;
+
+    // We delegate navigation to this object
+    protected Navigation_14877 navigation;
+
+    // Placement of the robot in field coordinates -> it is important to set this to null, unless you know the exact position of your robot
+    private FieldPlacement  currentRobotPlacement = null;
+
+    // Detector object
+    private GoldAlignDetector detector;
 
 
     @Override
@@ -98,6 +126,67 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
     /*********************************
      * AUTONOMOUS HIGH LEVEL TASKS
      */
+    protected void initRobot() {
+
+        super.initRobot();
+
+
+        /*********************       GYRO        *********************** */
+        // Set up the parameters with which we will use our IMU. Note that integration
+        // algorithm here just reports accelerations to the logcat log; it doesn't actually
+        // provide positional information.
+        BNO055IMU.Parameters gyroParameters = new BNO055IMU.Parameters();
+        gyroParameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+        gyroParameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        gyroParameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        gyroParameters.loggingEnabled      = true;
+        gyroParameters.loggingTag          = "IMU";
+        gyroParameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+
+
+        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
+        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
+        // and named "imu".
+        gyro = hardwareMap.get(BNO055IMU.class, "imu");
+        gyro.initialize(gyroParameters);
+
+
+        /* ************************************
+            NAVIGATION
+         */
+        navigation  = new Navigation_14877(hardwareMap,
+                telemetry,
+                VUFORIA_KEY,
+                CAMERA_CHOICE,
+                CAMERA_FORWARD_DISPLACEMENT,
+                CAMERA_VERTICAL_DISPLACEMENT,
+                CAMERA_LEFT_DISPLACEMENT,
+                this.DEBUG);
+
+
+
+        /* **********************************
+            GOLD DETECTOR
+         */
+        detector = new GoldAlignDetector(); // Create detector
+        detector.init(hardwareMap.appContext, CameraViewDisplay.getInstance()); // Initialize it with the app context and camera
+        detector.useDefaults(); // Set detector to use default settings
+
+        // Optional tuning
+        detector.alignSize = 100; // How wide (in pixels) is the range in which the gold object will be aligned. (Represented by green bars in the preview)
+        detector.alignPosOffset = 0; // How far from center frame to offset this alignment zone.
+        detector.downscale = 0.4; // How much to downscale the input frames
+
+        detector.areaScoringMethod = DogeCV.AreaScoringMethod.MAX_AREA; // Can also be PERFECT_AREA
+        //detector.perfectAreaScorer.perfectArea = 10000; // if using PERFECT_AREA scoring
+        detector.maxAreaScorer.weight = 0.005; //
+
+        detector.ratioScorer.weight = 5; //
+        detector.ratioScorer.perfectRatio = 1.0; // Ratio adjustment
+
+        detector.enable(); // Start the detector!
+
+    }
 
     /**
      * landRobot()
@@ -126,11 +215,112 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
      *
      * Overriden in the specific Position OpCodes.
      *
-     * High level command that will perform all the operations required to find the gold mineral and displace it
+     * High level command that will perform start turning the robot looking for Gold Mineral
+     * PreRequisite is that the Gold Mineral has to be close enough to be visible by the camera while the robot is rotating
      */
     protected void scanForGold () {
 
+        int direction = 0;
+        double angle = 0;
 
+        while (true) {
+
+            if ( !detector.getAligned() && detector.getDeviation() < 0 ) {
+                direction = TURN_DIRECTION_LEFT;
+                angle = 10.0;
+            }
+
+            else if ( !detector.getAligned() && detector.getDeviation() > 0 ) {
+                direction = TURN_DIRECTION_RIGHT;
+                angle = 10.0;
+            }
+
+            else if ( detector.getAligned() ) {
+                angle = 0;
+
+            }
+
+            turn (angle * direction);
+
+            if (angle * direction == 0) {
+                move(PROPULSION_FORWARD, 5);
+            }
+        }
+    }
+
+
+    /**
+     * gotoPlacement()
+     *
+     * This function takes a FieldPlacement object and position the robot according the x,y,orientation values
+     * in that object.
+     *
+     * @param  destination                      : x,y, orientation values (see the FieldPlacement class)
+     * @param setFinalOrientation               : true if the robot should go to its final orientation
+     *                                            false, if only placement is important regardless of orientation
+     */
+    protected void gotoPlacement(FieldPlacement destination, boolean setFinalOrientation) {
+
+        FieldPlacement newPlacement = null;
+
+        /* Check if we can "upgrade" our positioning */
+        while (true) {
+
+            justWait(1);
+            newPlacement = navigation.getPlacement();
+
+            if ( newPlacement != null ) {
+                currentRobotPlacement = new FieldPlacement(newPlacement);
+                break;
+            }
+
+            else if ( currentRobotPlacement != null ) {
+                break;
+            }
+
+            turn(15);
+        }
+
+        double translation_x = destination.x - currentRobotPlacement.x;
+        double translation_y = destination.y - currentRobotPlacement.y;
+        double theta = Math.toDegrees(Math.atan2(translation_y, translation_x));
+
+        dbugThis("** Entering gotoPlacement **");
+        dbugThis(String.format("Current position X: %2.2f", currentRobotPlacement.x));
+        dbugThis(String.format("Current position y: %2.2f", currentRobotPlacement.y));
+        dbugThis(String.format("Current orientation: %2.2f", currentRobotPlacement.orientation));
+
+        dbugThis(String.format("Target position X: %2.2f", destination.x));
+        dbugThis(String.format("Target position y: %2.2f", destination.y));
+        dbugThis(String.format("Final orientation y: %2.2f", destination.orientation));
+
+        dbugThis(String.format("Translation Y: %2.2f",translation_y));
+        dbugThis(String.format("Translation X: %2.2f",translation_x));
+        dbugThis(String.format("Heading Change to: %2.2f", theta));
+
+
+        double rotation = theta - currentRobotPlacement.orientation;
+        double translation = Math.sqrt(Math.pow(translation_x, 2) + Math.pow(translation_y, 2));
+
+        dbugThis(String.format("rotation:  %2.2f", rotation));
+        dbugThis(String.format("translation: %2.2f", translation));
+
+
+        dbugThis(String.format("Performing initial rotation: %2.2f", rotation));
+        turn(rotation);
+        dbugThis(String.format("Performing translation: %2.2f", translation));
+        move(this.PROPULSION_FORWARD, translation);
+
+        currentRobotPlacement = new FieldPlacement(destination);
+        currentRobotPlacement.orientation = theta;
+
+        if ( setFinalOrientation == true ) {
+
+            rotation = destination.orientation - theta;
+            dbugThis(String.format("Performing the final rotation:  %2.2f", rotation));
+            turn(rotation );
+            currentRobotPlacement.orientation = destination.orientation;
+        }
     }
 
 
