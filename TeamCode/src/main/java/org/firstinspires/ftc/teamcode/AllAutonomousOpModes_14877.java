@@ -36,6 +36,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.teamcode.AllOpModes_14877;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
@@ -77,10 +78,10 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
     protected Navigation_14877 navigation;
 
     // Placement of the robot in field coordinates -> it is important to set this to null, unless you know the exact position of your robot
-    private FieldPlacement  currentRobotPlacement = null;
+    protected FieldPlacement  currentRobotPlacement = null;
 
     // Detector object
-    private GoldAlignDetector detector;
+    protected GoldAlignDetector detector;
 
 
     @Override
@@ -114,10 +115,16 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
+            landRobot();
+            positionRobotBeforeGoldScan();
+            scanForGold();
             scoreMarker();
 
             break;
         }
+
+        detector.disable();
+        navigation.stop();
 
     }
 
@@ -209,6 +216,14 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
      */
     public void scoreMarker () { }
 
+    /**
+     *
+     * Overriden in the specific Position OpCodes.
+     *
+     * High level command that will perform all the operations required to prepare the robot to scan the gold cube
+     */
+    public void positionRobotBeforeGoldScan() { }
+
 
     /**
      * scanForGold()
@@ -218,35 +233,48 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
      * High level command that will perform start turning the robot looking for Gold Mineral
      * PreRequisite is that the Gold Mineral has to be close enough to be visible by the camera while the robot is rotating
      */
-    protected void scanForGold () {
+    protected void scanForGold() {
 
-        int direction = 0;
-        double angle = 0;
+        int direction = TURN_DIRECTION_LEFT;
+        double angle = 10.0;
 
-        while (true) {
+        while ( opModeIsActive() && !detector.isFound() ) {
+            turn (direction * angle);
+        }
 
-            if ( !detector.getAligned() && detector.getDeviation() < 0 ) {
-                direction = TURN_DIRECTION_LEFT;
-                angle = 10.0;
+        while ( opModeIsActive() && detector.isFound() ) {
+
+            dbugThis("Found Gold!!");
+
+            double deviation = detector.getDeviation();
+
+            dbugThis("Deviation: " + deviation);
+
+            if ( !detector.getAligned() && deviation < 0 ) {
+                angle = 5;
             }
 
-            else if ( !detector.getAligned() && detector.getDeviation() > 0 ) {
-                direction = TURN_DIRECTION_RIGHT;
-                angle = 10.0;
+            else if ( !detector.getAligned() && deviation > 0 ) {
+                angle = -5;
             }
 
             else if ( detector.getAligned() ) {
                 angle = 0;
+                dbugThis("WE are aligned");
 
             }
 
-            turn (angle * direction);
-
-            if (angle * direction == 0) {
-                move(PROPULSION_FORWARD, 5);
+            if ( angle == 0 ) {
+                detector.disable();
+                approach();
+                break;
+            }
+            else {
+                turn (angle);
             }
         }
     }
+
 
 
     /**
@@ -321,6 +349,22 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
             turn(rotation );
             currentRobotPlacement.orientation = destination.orientation;
         }
+    }
+
+
+
+    protected void approach() {
+
+//            telemetry.addData("raw ultrasonic", frontDistanceSensor.rawUltrasonic());
+//            telemetry.addData("raw optical", frontDistanceSensor.rawOptical());
+//            telemetry.addData("cm optical", "%.2f cm", frontDistanceSensor.cmOptical());
+//            telemetry.addData("cm", "%.2f cm", frontDistanceSensor.getDistance(DistanceUnit.CM));
+
+        double distance = frontDistanceSensor.getDistance(DistanceUnit.INCH);
+        if ( distance > 2 ) {
+            move(PROPULSION_FORWARD, distance);
+        }
+
     }
 
 

@@ -14,8 +14,8 @@ public class Autonomous_14877_Red_Left extends AllAutonomousOpModes_14877 {
         FieldPlacement[] MINERALS       = new FieldPlacement[3];
 
         MINERALS[0] = new FieldPlacement(-48.0, -24.0);
-        MINERALS[2] = new FieldPlacement(-36.0, -36.0);
-        MINERALS[3] = new FieldPlacement(-24.0, -48.0 );
+        MINERALS[1] = new FieldPlacement(-36.0, -36.0);
+        MINERALS[2] = new FieldPlacement(-24.0, -48.0 );
 
         super.runOpMode();
     }
@@ -27,9 +27,9 @@ public class Autonomous_14877_Red_Left extends AllAutonomousOpModes_14877 {
         dropMarker();
     }
 
-    @Override
-    protected void scanForGold () {
-
-    }
+//    @Override
+//    protected void scanForGold () {
+//        super.scanForGold();
+//    }
 
 }

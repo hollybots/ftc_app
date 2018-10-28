@@ -53,9 +53,6 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
          * GAME IS ON !!
          * *******************************************/
 
-        /** Start tracking the data sets we care about. */
-        navigation.activate();
-
         // run until the end of the match (driver presses STOP)
         while ( opModeIsActive() ) {
 
@@ -197,12 +194,6 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
                 dumpBall = true;
             }
 
-            /* Get Current placement */
-
-            FieldPlacement placement = navigation.getPlacement();
-            if ( placement != null ) {
-                telemetry.addData("VuForia", "We have a placement!!");
-            }
 
 
             if ((rightPropulsionCommand > 0) && (leftPropulsionCommand > 0)) {

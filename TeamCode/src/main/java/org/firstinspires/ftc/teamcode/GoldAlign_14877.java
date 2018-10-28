@@ -39,7 +39,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
 @TeleOp(name="GoldAlign 14877", group="DogeCV")
-@Disabled
+//@Disabled
 public class GoldAlign_14877 extends OpMode
 {
 

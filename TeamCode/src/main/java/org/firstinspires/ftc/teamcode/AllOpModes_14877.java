@@ -42,6 +42,7 @@ import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
@@ -80,6 +81,12 @@ public class AllOpModes_14877 extends LinearOpMode {
 
     // position of the minerals
     protected FieldPlacement MINERALS[];
+
+    // Do we have to turn righ or left to find gold
+    protected int GOLD_DIRECTION_FROM_LANDING            = 0;
+
+
+    /**************************************************************/
 
 
     /**
@@ -164,10 +171,7 @@ public class AllOpModes_14877 extends LinearOpMode {
     protected DigitalChannel armLimitDown = null;
 
 
-//    protected ColorSensor frontColorSensor = null;
-//    protected DistanceSensor frontDistanceSensor = null;
-//    protected ModernRoboticsI2cRangeSensor backDistanceSensor = null;
-
+    protected ModernRoboticsI2cRangeSensor frontDistanceSensor = null;
 
     @Override
     public void runOpMode() {}
@@ -234,9 +238,7 @@ public class AllOpModes_14877 extends LinearOpMode {
         /* **************************************
             DISTANCE AND COLOR
          */
-//        frontColorSensor = hardwareMap.get(ColorSensor.class, "front_color_distance");
-//        frontDistanceSensor = hardwareMap.get(DistanceSensor.class, "front_color_distance");
-//        backDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "back_distance");
+        frontDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "front_distance");
 
     }
 

@@ -206,4 +206,8 @@ public class GoldAlignDetector extends DogeCVDetector {
         double alignX    = (getAdjustedSize().width / 2) + alignPosOffset; // Center point in X Pixels
         return getXPosition() - alignX;
     }
+
+    public double getApproxDistance() {
+        return 0;
+    }
 }

@@ -249,6 +249,11 @@ public class Navigation_14877 {
         targetsRoverRuckus.activate();
     }
 
+    public void stop() {
+
+        targetsRoverRuckus.deactivate();
+    }
+
 
     public FieldPlacement getPlacement() {
 
