@@ -49,6 +49,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.internal.android.dx.rop.code.Exceptions;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.BACK;
 
@@ -106,29 +107,35 @@ public class AllOpModes_14877 extends LinearOpMode {
 
     protected static final double SWIVEL_DOWN                      = 1;
     protected static final double SWIVEL_UP                        = -1;
-    protected static final double SWIVEL_SPEED                     = 0.2;
+    protected static final double SWIVEL_SPEED                     = 0.1;
 
 
-    protected static final double MARKER_DOWN                         = 0.2;
-    protected static final double MARKER_UP                           = 0.8;
+    protected static final double MARKER_DOWN                      = 0.2;
+    protected static final double MARKER_UP                        = 0.8;
 
-    protected static final double BALL_HOLD                             = 0;
-    protected static final double BALL_DUMP                             = 1;
+    protected static final double BALL_HOLD                        = 0;
+    protected static final double BALL_DUMP                        = 1;
 
+    protected static final double BIGGUY_PULLUP_LENGTH             = 4.0;
+    protected static final double BIGGUY_SPEED                     = 0.2;
+    protected static final double BIGGUY_DRIVE_GEAR_REDUCTION      = 1.0;                  // This is < 1.0 if geared UP
+    protected static final double BIGGUY_COIL_CIRCUMFERENCE        = 1.0 * 3.14159;        // For figuring circumference
+    protected static final double BIGGUY_ENCODER_COUNTS_PER_INCH   = (TORQUENADO_COUNTS_PER_MOTOR_REV * BIGGUY_DRIVE_GEAR_REDUCTION) / BIGGUY_COIL_CIRCUMFERENCE;
 
     protected static final int SLIDE_OUT                          = -1;
     protected static final int SLIDE_IN                           = 1;
-    protected static final double SLIDE_SPEED                     = 0.2;
+    protected static final double SLIDE_SPEED                     = 0.1;   // Speed at which the motors retracts and extends the linear motion
+    protected static final double SLIDE_PULLUP_SPEED              = 0.1;   // Speed at which the SLIDE motor coils the cable of the slide as the other motor pull the robot up
 
     protected static final double SLIDE_DRIVE_GEAR_REDUCTION      = 1.0;                  // This is < 1.0 if geared UP
     protected static final double SLIDE_COIL_CIRCUMFERENCE        = 1.0 * 3.14159;        // For figuring circumference
     protected static final double SLIDE_ENCODER_COUNTS_PER_INCH   = (NEVEREST40_COUNTS_PER_MOTOR_REV * SLIDE_DRIVE_GEAR_REDUCTION) / SLIDE_COIL_CIRCUMFERENCE;
 
-    protected static final int PROPULSION_FORWARD                  = 1;
-    protected static final int PROPULSION_BACKWARD                 = -1;
+    protected static final int PROPULSION_FORWARD                 = 1;
+    protected static final int PROPULSION_BACKWARD                = -1;
     protected static final int TURN_DIRECTION_LEFT                = 1;  // this is a direction for
     protected static final int TURN_DIRECTION_RIGHT               = -1;
-    protected static final int ERROR_POSITION_COUNT                = 10;
+    protected static final int ERROR_POSITION_COUNT               = 10;
     protected static final double DRIVE_SPEED                     = 0.9;
     /***  IMPORTANT NOTE IF YOU DONT WANT TO GET STUCK in an infinite loop while turning:
      P_TURN_COEFF * TURNING_SPEED must be > 0.1
@@ -153,10 +160,11 @@ public class AllOpModes_14877 extends LinearOpMode {
 
 
     // Robot Hardware
-    protected DcMotor leftDrive = null;
-    protected DcMotor rightDrive = null;
-    protected DcMotor slide        = null;
-    protected DcMotor lift         = null;
+    protected DcMotor leftDrive     = null;
+    protected DcMotor rightDrive    = null;
+    protected DcMotor slide         = null;
+    protected DcMotor lift          = null;
+    protected DcMotor bigGuy        = null;
 
     protected Servo marker   = null;
 
@@ -214,11 +222,23 @@ public class AllOpModes_14877 extends LinearOpMode {
         leftDrive.setDirection(DcMotor.Direction.REVERSE);
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
 
+        // swivel motion
+        try {
+            lift = hardwareMap.get(DcMotor.class, "lift");
+            lift.setDirection(DcMotor.Direction.FORWARD);
+        }
+        catch (Exception e) {
+            lift = null;
+            //error handling code
+        }
 
-        lift  = hardwareMap.get(DcMotor.class, "lift");
+        // linear motion
         slide = hardwareMap.get(DcMotor.class, "slide");
-        lift.setDirection(DcMotor.Direction.FORWARD);
         slide.setDirection(DcMotor.Direction.FORWARD);
+
+        // force linear motion to compress
+        bigGuy  = hardwareMap.get(DcMotor.class, "power_lift");
+        bigGuy.setDirection(DcMotor.Direction.FORWARD);
 
 
         /* ************************************
@@ -257,7 +277,7 @@ public class AllOpModes_14877 extends LinearOpMode {
      */
     public boolean retracting(double command) {
 
-        return (command > 0);
+        return (command < 0);
     }
 
 
@@ -284,7 +304,7 @@ public class AllOpModes_14877 extends LinearOpMode {
      */
     protected void extendArm(double length) {
 
-        slideArm(SLIDE_OUT, length);
+        slideArm(SLIDE_OUT, SLIDE_SPEED, length);
 
     }
 
@@ -297,7 +317,7 @@ public class AllOpModes_14877 extends LinearOpMode {
      */
     protected void retractArm(double length) {
 
-        slideArm(SLIDE_IN, length);
+        slideArm(SLIDE_IN, SLIDE_SPEED, length);
 
     }
 
@@ -307,7 +327,7 @@ public class AllOpModes_14877 extends LinearOpMode {
      *
      * @param lengthInInches : Change in length
      */
-    protected void slideArm(int direction, double lengthInInches) {
+    protected void slideArm(int direction, double speed, double lengthInInches) {
 
         int moveCounts  = 0;
         int newTarget   = 0;
@@ -319,7 +339,7 @@ public class AllOpModes_14877 extends LinearOpMode {
         }
 
         slide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        slide.setPower(SLIDE_SPEED);
+        slide.setPower(speed);
 
         if ( lengthInInches == 0 ) {
 
@@ -370,6 +390,70 @@ public class AllOpModes_14877 extends LinearOpMode {
     protected boolean armCompletelyRetracted() {
 
         return !(this.armLimitRetracted.getState() == true);
+    }
+
+
+
+    /**
+     * pullUp()
+     *
+     * Extend the arm a given amount of inches
+     *
+     */
+    protected void pullUp() {
+
+        powerLift(SLIDE_IN, BIGGUY_PULLUP_LENGTH);
+        slideArm(SLIDE_IN, SLIDE_PULLUP_SPEED, BIGGUY_PULLUP_LENGTH);
+
+    }
+
+
+
+    /**
+     *
+     * @param direction : SLIDE_OUT or SLIDE_IN
+     *
+     * @param lengthInInches : Change in length
+     */
+    protected void powerLift(int direction, double lengthInInches) {
+
+        int moveCounts  = 0;
+        int newTarget   = 0;
+
+        if ( lengthInInches > 0 ) {
+
+            moveCounts = (int) (direction * lengthInInches * BIGGUY_ENCODER_COUNTS_PER_INCH);
+            newTarget = bigGuy.getCurrentPosition() + moveCounts;
+        }
+
+        bigGuy.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        bigGuy.setPower(SLIDE_SPEED);
+
+        if ( lengthInInches == 0 ) {
+
+            bigGuy.setPower(0);
+            return;
+        }
+
+        while ( true ) {
+
+            if ( lengthInInches > 0 ) {
+                if (newTarget - bigGuy.getCurrentPosition() <= 0) {
+                    break;
+                }
+            }
+
+            if ( armCompletelyExtended() && direction == SLIDE_OUT ) {
+                break;
+            }
+            if ( armCompletelyRetracted() && direction == SLIDE_IN ) {
+                break;
+            }
+
+        }
+
+        bigGuy.setPower(0);
+        return;
     }
 
 

@@ -30,8 +30,9 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
 
         double markerCommand = 0.0;
 
-        boolean grabBall = false;
-        boolean dumpBall = false;
+        boolean grabBall        = false;
+        boolean dumpBall        = false;
+        boolean timeToPullUp    = false;
 
 
         telemetry.addData("Status", "Initialized");
@@ -57,50 +58,35 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
         while ( opModeIsActive() ) {
 
 
-            /** Telemetry Gamepad 1 */
-            telemetry.addData("Gamepad1 Right Y:", gamepad1.right_stick_y);
-            telemetry.addData("Gamepad1 Left Y:", gamepad1.left_stick_y);
-            telemetry.addData("Gamepad1 Right Bumper:", gamepad1.right_bumper);
-            telemetry.addData("Gamepad1 Left Bumper:", gamepad1.left_bumper);
-
-            /** Telemetry Gamepad 1 */
-            telemetry.addData("Gamepad2 Right Y:", gamepad2.right_stick_y);
-            telemetry.addData("Gamepad2 Left Y:", gamepad2.left_stick_y);
-            telemetry.addData("Gamepad2 Right Bumper:", gamepad2.right_bumper);
-            telemetry.addData("Gamepad2 Left Bumper:", gamepad2.left_bumper);
-
-
 //            /* Check  remote 1 */
 //            // Tank Mode uses one stick to control each wheel.
 //            // - This requires no math, but it is hard to drive forward slowly and keep straight.
-            rightPropulsionCommand  = -gamepad1.right_stick_y;
-            leftPropulsionCommand   = -gamepad1.left_stick_y;
+            rightPropulsionCommand = -gamepad1.right_stick_y;
+            leftPropulsionCommand = -gamepad1.left_stick_y;
 
-            boolean stopped = gamepad1.left_stick_y  == 0.0 || gamepad1.right_stick_y == 0.0;
-            boolean turning = ( -gamepad1.left_stick_y > 0 && -gamepad1.right_stick_y < 0 ||  -gamepad1.left_stick_y < 0 && -gamepad1.right_stick_y > 0 );
-            boolean forward = !turning && ( -gamepad1.left_stick_y < 0 && -gamepad1.right_stick_y < 0 );
+            boolean stopped = gamepad1.left_stick_y == 0.0 || gamepad1.right_stick_y == 0.0;
+            boolean turning = (-gamepad1.left_stick_y > 0 && -gamepad1.right_stick_y < 0 || -gamepad1.left_stick_y < 0 && -gamepad1.right_stick_y > 0);
+            boolean forward = !turning && (-gamepad1.left_stick_y < 0 && -gamepad1.right_stick_y < 0);
 
-            if ( stopped ) {
-                rightPropulsionCommand  = 0.0;
-                leftPropulsionCommand   = 0.0;
+            if (stopped) {
+                rightPropulsionCommand = 0.0;
+                leftPropulsionCommand = 0.0;
             }
 
             /*  Make sure the robot goes straight */
-            else if ( !turning ) {
-                if ( forward ) {
-                    rightPropulsionCommand  = leftPropulsionCommand = Math.max(leftPropulsionCommand, rightPropulsionCommand);
-                }
-                else {
-                    rightPropulsionCommand  = leftPropulsionCommand = Math.min(leftPropulsionCommand, rightPropulsionCommand);
+            else if (!turning) {
+                if (forward) {
+                    rightPropulsionCommand = leftPropulsionCommand = Math.max(leftPropulsionCommand, rightPropulsionCommand);
+                } else {
+                    rightPropulsionCommand = leftPropulsionCommand = Math.min(leftPropulsionCommand, rightPropulsionCommand);
                 }
             }
 
 
             /** Bumpers left and right Team marker down and up */
-            if ( gamepad1.right_bumper ) {
+            if (gamepad1.right_bumper) {
                 markerCommand = MARKER_DOWN;
-            }
-            else if (gamepad1.left_bumper ) {
+            } else if (gamepad1.left_bumper) {
                 markerCommand = MARKER_UP;
             }
 
@@ -114,20 +100,24 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
 
 
             /* Limit the speed on slide motor */
-            if ( slideCommand < 0.0 ) {
+            if (slideCommand < 0.0) {
                 slideCommand = -SLIDE_SPEED;
-            } else if ( slideCommand > 0.0 ) {
+            } else if (slideCommand > 0.0) {
                 slideCommand = SLIDE_SPEED;
             }
 
             /* Limit the speed on swivel motor */
-            if ( swivelCommand < 0.0 ) {
+            if (swivelCommand < 0.0) {
                 swivelCommand = -SWIVEL_SPEED;
-            } else if ( swivelCommand > 0.0) {
+            } else if (swivelCommand > 0.0) {
                 swivelCommand = SWIVEL_SPEED;
             }
 
 
+            /* If both triggers are pressed hard, we initiate pull ou */
+            if ((gamepad2.left_trigger > 0.7) && (gamepad2.right_trigger > 0.7)) {
+                timeToPullUp = true;
+            }
 
 
 //            /* Check sensors */
@@ -184,6 +174,48 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
 //                slideCommand = 0;
 //            }
 
+            // Extending arm
+            if (swivelCommand > 0) {
+
+                slide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+                bigGuy.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+                // uncoiling too fast
+                bigGuy.setPower(-swivelCommand * 5.0);
+                if (gamepad2.left_trigger < 0.3) {
+                    slide.setPower(swivelCommand);
+                }
+            }
+
+            // pulling ourselvers up
+            else if (swivelCommand < 0) {
+
+                slide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+                bigGuy.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+                bigGuy.setPower(-swivelCommand * 10.0);
+                dbugThis("" + (-swivelCommand * 10.0));
+                if (gamepad2.left_trigger < 0.3) {
+                    slide.setPower(swivelCommand);
+                }
+            }
+
+            else {
+                bigGuy.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+                bigGuy.setPower(0);
+                slide.setPower(0);
+            }
+
+
+
+
+
+
+//            if ( timeToPullUp ) {
+//                pullUp();
+//                break;
+//            }
+
+
 
             /** Bumpers left and right Team marker down and up */
             if ( gamepad2.right_bumper ) {
@@ -212,7 +244,7 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
                 lastLeftPropulsionCommand = leftPropulsionCommand;
             }
 
-            if ( swivelCommand != lastSwivelCommand ) {
+            if ( swivelCommand != lastSwivelCommand  && lift != null ){
                 /** Increasing power */
                 lift.setPower(swivelCommand);
                 lastSwivelCommand = swivelCommand;
@@ -237,13 +269,18 @@ public class HardwareTest_14877 extends AllOpModes_14877 {
                 justWait(1.5);
                 ballGrabber.setPower(0.0);
 
-                /** This is were we reset the 0 for the arm lift, so we can synchronize the lift and the bucket tilt */
-                lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-                lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                lift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+                if ( lift != null ) {
+
+                    /** This is were we reset the 0 for the arm lift, so we can synchronize the lift and the bucket tilt */
+                    lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+                    lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    lift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                }
+
             }
 
-            if ( swivelingUp(swivelCommand) ) {
+            if ( swivelingUp(swivelCommand) && lift != null) {
                 int posLift = lift.getCurrentPosition();
                 dbugThis(String.format("Current position X: %d", posLift));
                // ballDumper.setPosition(getHoldPosition(posLift));
