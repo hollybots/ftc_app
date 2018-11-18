@@ -68,7 +68,7 @@ import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocaliz
 
 @TeleOp(name="Basic: All OpModes 14877", group="Linear Opmode")
 @Disabled
-public class AllOpModes_14877 extends LinearOpMode {
+public class AllOpModes_prototype extends LinearOpMode {
 
 
     /** Injected values : See the child Red, Blue Extended OpModes **/
@@ -107,7 +107,7 @@ public class AllOpModes_14877 extends LinearOpMode {
 
     protected static final double SWIVEL_DOWN                      = 1;
     protected static final double SWIVEL_UP                        = -1;
-    protected static final double SWIVEL_SPEED                     = 0.1;
+    protected static final double SWIVEL_SPEED                     = 1.0;
 
 
     protected static final double MARKER_DOWN                      = 0.2;
@@ -124,8 +124,8 @@ public class AllOpModes_14877 extends LinearOpMode {
 
     protected static final int SLIDE_OUT                          = -1;
     protected static final int SLIDE_IN                           = 1;
-    protected static final double SLIDE_SPEED                     = 0.1;   // Speed at which the motors retracts and extends the linear motion
-    protected static final double SLIDE_PULLUP_SPEED              = 0.1;   // Speed at which the SLIDE motor coils the cable of the slide as the other motor pull the robot up
+    protected static final double SLIDE_SPEED                     = 0.4;   // Speed at which the motors retracts and extends the linear motion
+    protected static final double SLIDE_PULLUP_SPEED              = 0.4;   // Speed at which the SLIDE motor coils the cable of the slide as the other motor pull the robot up
 
     protected static final double SLIDE_DRIVE_GEAR_REDUCTION      = 1.0;                  // This is < 1.0 if geared UP
     protected static final double SLIDE_COIL_CIRCUMFERENCE        = 1.0 * 3.14159;        // For figuring circumference
@@ -163,20 +163,14 @@ public class AllOpModes_14877 extends LinearOpMode {
     protected DcMotor leftDrive     = null;
     protected DcMotor rightDrive    = null;
     protected DcMotor slide         = null;
-    protected DcMotor lift          = null;
     protected DcMotor bigGuy        = null;
 
     protected Servo marker   = null;
-
-    protected CRServo   ballGrabber = null;
-    protected Servo     ballDumper = null;
 
     protected BNO055IMU gyro = null;              // integrated IMU
 
     protected DigitalChannel armLimitExtended = null;
     protected DigitalChannel armLimitRetracted = null;
-    protected DigitalChannel armLimitUp = null;
-    protected DigitalChannel armLimitDown = null;
 
 
     protected ModernRoboticsI2cRangeSensor frontDistanceSensor = null;
@@ -205,13 +199,6 @@ public class AllOpModes_14877 extends LinearOpMode {
 
 
         /* ************************************
-            MINERAL GRABBER
-        */
-
-        ballGrabber = hardwareMap.get(CRServo.class, "ball_grabber");
-        ballDumper = hardwareMap.get(Servo.class, "ball_dumper");
-
-        /* ************************************
             DC MOTORS
         */
         leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
@@ -222,44 +209,27 @@ public class AllOpModes_14877 extends LinearOpMode {
         leftDrive.setDirection(DcMotor.Direction.REVERSE);
         rightDrive.setDirection(DcMotor.Direction.FORWARD);
 
-        // swivel motion
-        try {
-            lift = hardwareMap.get(DcMotor.class, "lift");
-            lift.setDirection(DcMotor.Direction.FORWARD);
-        }
-        catch (Exception e) {
-            lift = null;
-            //error handling code
-        }
-
         // linear motion
         slide = hardwareMap.get(DcMotor.class, "slide");
-        slide.setDirection(DcMotor.Direction.FORWARD);
+        slide.setDirection(DcMotor.Direction.REVERSE);
 
         // force linear motion to compress
         bigGuy  = hardwareMap.get(DcMotor.class, "power_lift");
-        bigGuy.setDirection(DcMotor.Direction.FORWARD);
+        bigGuy.setDirection(DcMotor.Direction.REVERSE);
 
 
         /* ************************************
             LIMIT SWITCHES
         */
-//        armLimitExtended = hardwareMap.get(DigitalChannel.class, "arm_limit_extended");
-//        armLimitExtended.setMode(DigitalChannel.Mode.INPUT);
-//        armLimitRetracted = hardwareMap.get(DigitalChannel.class, "arm_limit_retracted");
-//        armLimitRetracted.setMode(DigitalChannel.Mode.INPUT);
-//
-//        armLimitUp = hardwareMap.get(DigitalChannel.class, "arm_limit_up");
-//        armLimitUp.setMode(DigitalChannel.Mode.INPUT);
-//        armLimitDown = hardwareMap.get(DigitalChannel.class, "arm_limit_down");
-//        armLimitDown.setMode(DigitalChannel.Mode.INPUT);
-
+        armLimitExtended = hardwareMap.get(DigitalChannel.class, "arm_limit_extended");
+        armLimitExtended.setMode(DigitalChannel.Mode.INPUT);
+        armLimitRetracted = hardwareMap.get(DigitalChannel.class, "arm_limit_retracted");
+        armLimitRetracted.setMode(DigitalChannel.Mode.INPUT);
 
         /* **************************************
             DISTANCE AND COLOR
          */
         frontDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "front_distance");
-
     }
 
 
@@ -338,8 +308,30 @@ public class AllOpModes_14877 extends LinearOpMode {
             newTarget = slide.getCurrentPosition() + moveCounts;
         }
 
-        slide.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        slide.setPower(speed);
+
+        if ( direction == SLIDE_OUT ) {
+            // uncoiling
+            bigGuy.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            bigGuy.setPower(-speed);
+
+            if ( !armCompletelyExtended() ) {
+
+                slide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+                slide.setPower(speed * 0.5);
+            }
+        }
+
+        if ( direction == SLIDE_IN ) {
+            // coiling
+            bigGuy.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            bigGuy.setPower(-speed);
+
+            if ( !armCompletelyRetracted() ) {
+
+                slide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+                slide.setPower(speed * 0.1);
+            }
+        }
 
         if ( lengthInInches == 0 ) {
 
@@ -377,7 +369,7 @@ public class AllOpModes_14877 extends LinearOpMode {
      */
     protected boolean armCompletelyExtended() {
 
-        return !(this.armLimitExtended.getState() == true );
+        return (( this.armLimitExtended.getState() == false ));
     }
 
     /**
@@ -389,147 +381,7 @@ public class AllOpModes_14877 extends LinearOpMode {
      */
     protected boolean armCompletelyRetracted() {
 
-        return !(this.armLimitRetracted.getState() == true);
-    }
-
-
-
-    /**
-     * pullUp()
-     *
-     * Extend the arm a given amount of inches
-     *
-     */
-    protected void pullUp() {
-
-        powerLift(SLIDE_IN, BIGGUY_PULLUP_LENGTH);
-        slideArm(SLIDE_IN, SLIDE_PULLUP_SPEED, BIGGUY_PULLUP_LENGTH);
-
-    }
-
-
-
-    /**
-     *
-     * @param direction : SLIDE_OUT or SLIDE_IN
-     *
-     * @param lengthInInches : Change in length
-     */
-    protected void powerLift(int direction, double lengthInInches) {
-
-        int moveCounts  = 0;
-        int newTarget   = 0;
-
-        if ( lengthInInches > 0 ) {
-
-            moveCounts = (int) (direction * lengthInInches * BIGGUY_ENCODER_COUNTS_PER_INCH);
-            newTarget = bigGuy.getCurrentPosition() + moveCounts;
-        }
-
-        bigGuy.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        bigGuy.setPower(SLIDE_SPEED);
-
-        if ( lengthInInches == 0 ) {
-
-            bigGuy.setPower(0);
-            return;
-        }
-
-        while ( true ) {
-
-            if ( lengthInInches > 0 ) {
-                if (newTarget - bigGuy.getCurrentPosition() <= 0) {
-                    break;
-                }
-            }
-
-            if ( armCompletelyExtended() && direction == SLIDE_OUT ) {
-                break;
-            }
-            if ( armCompletelyRetracted() && direction == SLIDE_IN ) {
-                break;
-            }
-
-        }
-
-        bigGuy.setPower(0);
-        return;
-    }
-
-
-
-
-    /*******************************
-     * ARM SWING HELPERS
-     */
-    /**
-     * armAtHighest()
-     *
-     * Returns true if the LIMIT HIGH switch has been reached.
-     *
-     * @return
-     */
-    protected boolean armAtHighest() {
-
-        return !(this.armLimitUp.getState() == true);
-    }
-
-    /**
-     * armLimitDown()
-     *
-     * Returns true if the LIMIT LOW switch has been reached.
-     *
-     * @return
-     */
-    protected boolean armAtLowest() {
-
-        return !(this.armLimitDown.getState() == true);
-    }
-
-    /**
-     * swivelingUp()
-     *
-     * Returns true if the arm is going up'
-     *
-     * @param command           :  Command sent to the arm swivel motor
-     *
-     * @return
-     */
-    protected boolean swivelingUp(double command)  {
-
-        return (command > 0 );
-    }
-
-
-    /**
-     * swivelingDown()
-     *
-     * Returns true if the arm is going down
-     *
-     * @param command           :  Command sent to the arm swivel motor
-     *
-     * @return
-     */
-    protected boolean swivelingDown(double command) {
-
-        return (command < 0);
-    }
-
-    /**
-     * getHoldPosition()
-     *
-     * This function returns the position of the bucket tilt as a function of the position (in motor encoder counts) of the lifting arm
-     * It needs a lot of trial and error to find this function but we know its linear.  so y = mx + b
-     *
-     * @param posLift
-     * @return the position in terms of servo (so between 0 and 1)
-     */
-    protected double getHoldPosition(int posLift) {
-
-        double m = 0.5;
-        double b = 0;
-
-        return  m * posLift + b;
+        return (( this.armLimitRetracted.getState() == false ));
     }
 
 
@@ -574,7 +426,6 @@ public class AllOpModes_14877 extends LinearOpMode {
         justWait(2);
         marker.setPosition(MARKER_UP);
     }
-
 
 
     /******************************
@@ -804,7 +655,5 @@ public class AllOpModes_14877 extends LinearOpMode {
             Log.d("FIRST:", s);
         }
     }
-
-
 }
 

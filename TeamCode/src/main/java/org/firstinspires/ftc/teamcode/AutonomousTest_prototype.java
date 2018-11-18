@@ -1,12 +1,10 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 @Autonomous(name="Autonomous Test 14877", group="Scheduled")
 //@Disabled
-public class AutonomousTest_14877 extends AllAutonomousOpModes_14877 {
+public class AutonomousTest_prototype extends AllAutonomousOpModes_prototype {
 
 
 

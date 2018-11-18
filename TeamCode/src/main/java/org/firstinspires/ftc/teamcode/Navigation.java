@@ -57,7 +57,7 @@ import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocaliz
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.FRONT;
 
 
-public class Navigation_14877 {
+public class Navigation {
 
     private static final String VUFORIA_KEY = "AXINfYT/////AAAAGfcLttUpcU8GheQqMMZAtnFDz/qRJOlHnxEna51521+PFcmEWc02gUQ1s4DchmXk+fFvt+afRNF+2UoUgoAyQNtfVjRNS0u4f5o4kka/jERVEtKlJ27pO4euCEjE1DQ+l8ecADKTd1aWu641OheSf/RqDJ7BSvDct/PYRfRLfShAfBUxaFT3+Ud+6EL31VTmZKiylukvCnHaaQZxDmB2cCDdYFeK2CDwNIWoMx2VvweehNARttNvSR3cp4AepbtWnadsEnDQaStDv8jN09iE7CRWmMY8rrP8ba/O/eVlz0vzU7Fhtf2jXpSvCJn0qDw+1UK/bHsD/vslhdp+CBNcW7bT3gNHgTOrnIcldX2YhgZS";
 
@@ -100,14 +100,14 @@ public class Navigation_14877 {
      * @param cameraLeftDisplacement
      * @param cameraVerticalDisplacement
      */
-    public Navigation_14877(HardwareMap hardwareMap,
-                     Telemetry telemetry,
-                     String vuForiaKey,
-                     VuforiaLocalizer.CameraDirection cameraChoice,
-                     int cameraForwardDisplacement,
-                     int cameraLeftDisplacement,
-                     int cameraVerticalDisplacement,
-                     boolean debug)
+    public Navigation(HardwareMap hardwareMap,
+                      Telemetry telemetry,
+                      String vuForiaKey,
+                      VuforiaLocalizer.CameraDirection cameraChoice,
+                      int cameraForwardDisplacement,
+                      int cameraLeftDisplacement,
+                      int cameraVerticalDisplacement,
+                      boolean debug)
     {
         this.DEBUG  = debug;
         this.telemetry = telemetry;

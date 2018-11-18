@@ -38,11 +38,9 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.teamcode.AllOpModes_14877;
+
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import java.lang.Override;
-
-import android.util.Log;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection.BACK;
 
@@ -61,7 +59,7 @@ import static org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocaliz
 
 @TeleOp(name="Basic: Autonomous 14877", group="Linear Opmode")
 @Disabled
-public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
+public class AllAutonomousOpModes_prototype extends AllOpModes_prototype {
 
 
     /**
@@ -75,7 +73,7 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
     protected static final VuforiaLocalizer.CameraDirection CAMERA_CHOICE     = BACK;
 
     // We delegate navigation to this object
-    protected Navigation_14877 navigation;
+    protected Navigation navigation;
 
     // Placement of the robot in field coordinates -> it is important to set this to null, unless you know the exact position of your robot
     protected FieldPlacement  currentRobotPlacement = null;
@@ -161,7 +159,7 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
         /* ************************************
             NAVIGATION
          */
-        navigation  = new Navigation_14877(hardwareMap,
+        navigation  = new Navigation(hardwareMap,
                 telemetry,
                 VUFORIA_KEY,
                 CAMERA_CHOICE,
@@ -366,8 +364,6 @@ public class AllAutonomousOpModes_14877 extends AllOpModes_14877 {
         }
 
     }
-
-
 
 
 }

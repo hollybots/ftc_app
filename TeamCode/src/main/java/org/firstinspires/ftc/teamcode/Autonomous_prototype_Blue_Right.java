@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 @Autonomous(name="Team Blue - Right", group="Scheduled")
-public class Autonomous_14877_Blue_Right extends AllAutonomousOpModes_14877 {
+public class Autonomous_prototype_Blue_Right extends AllAutonomousOpModes_prototype {
 
     @Override
     public void runOpMode() {
